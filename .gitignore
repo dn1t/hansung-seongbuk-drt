@@ -5,23 +5,14 @@ dist
 .netlify
 .vinxi
 app.config.timestamp_*.js
+/migrations
 
 # Environment
 .env
 .env*.local
 
-# dependencies
+# Dependencies
 /node_modules
-
-# IDEs and editors
-/.idea
-.project
-.classpath
-*.launch
-.settings/
-
-# Temp
-gitignore
 
 # System Files
 .DS_Store

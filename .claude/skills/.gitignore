@@ -1,5 +1,6 @@
 # pnpm
 /agent-loops
+/drizzle
 /reactivity-diagnostics
 /server-components
 /solid-2.0

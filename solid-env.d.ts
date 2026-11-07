@@ -20,7 +20,10 @@ declare module 'virtual:solid-env/server' {
     ? O
     : string;
   const env: {
-    readonly "SESSION_SECRET": __Out<__Schema["server"]["SESSION_SECRET"]>;
+    readonly "AUTH_SECRET": __Out<__Schema["server"]["AUTH_SECRET"]>;
+    readonly "BASE_URL": __Out<__Schema["server"]["BASE_URL"]>;
+    readonly "TURSO_CONNECTION_URL": __Out<__Schema["server"]["TURSO_CONNECTION_URL"]>;
+    readonly "TURSO_AUTH_TOKEN": __Out<__Schema["server"]["TURSO_AUTH_TOKEN"]>;
     readonly "VITE_APP_NAME": __Out<__Schema["client"]["VITE_APP_NAME"]>;
   };
   export { env };

@@ -1,6 +1,6 @@
 import { createCookie } from "@remix-run/cookie";
-import { getRequestEvent } from "@solidjs/web";
 import type { RequestEvent, ResponseStub } from "@solidjs/web";
+import { getRequestEvent } from "@solidjs/web";
 import { env } from "virtual:solid-env/server";
 
 export interface SessionData {
@@ -9,12 +9,12 @@ export interface SessionData {
 
 const MAX_AGE = 60 * 60 * 24 * 7;
 
-const secrets = (env.SESSION_SECRET ?? "")
+const secrets = (env.AUTH_SECRET ?? "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 if (secrets.length === 0) {
-  throw new Error("session: SESSION_SECRET is not set — generate one with `openssl rand -base64 32`");
+  throw new Error("session: AUTH_SECRET is not set — generate one with `openssl rand -base64 32`");
 }
 
 const cookie = createCookie("session", {
