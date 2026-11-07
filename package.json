@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "start": "node --env-file-if-exists=.env dist/server/node.js",
     "serve": "vite preview",
@@ -19,6 +19,7 @@
     "@solidjs/diagnostics": "^2.0.0-rc.20",
     "@solidjs/start-devtools": "^1.0.0-next.4",
     "@solidjs/vite-plugin": "^3.0.0-next.54",
+    "@tailwindcss/vite": "^4.3.4",
     "@types/node": "^26.2.0",
     "dotenv": "^18.0.9",
     "drizzle-kit": "1.0.0-rc.5",
@@ -26,6 +27,7 @@
     "filesystem-routing": "0.4.2",
     "oxfmt": "^0.76.0",
     "oxlint": "~1.79.0",
+    "tailwindcss": "^4.3.4",
     "typescript": "^5.9.2",
     "vite": "^8.3.5"
   },
@@ -39,6 +41,7 @@
     "better-auth": "^1.7.18",
     "drizzle-orm": "1.0.0-rc.5",
     "solid-js": "^2.0.0-rc.20",
+    "tailwindcss-radix-colors": "^2.1.0",
     "valibot": "^1.4.2"
   }
 }

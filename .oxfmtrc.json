@@ -3,5 +3,9 @@
   "printWidth": 120,
   "tabWidth": 2,
   "sortImports": true,
+  "sortTailwindcss": {
+    "stylesheet": "./src/tailwind.css",
+    "functions": ["cn"]
+  },
   "ignorePatterns": []
 }

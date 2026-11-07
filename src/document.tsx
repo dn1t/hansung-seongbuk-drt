@@ -1,14 +1,16 @@
 import { HydrationScript } from "@solidjs/web";
 import type { ParentProps } from "solid-js";
+import env from "virtual:solid-env/client";
 
 export default function Document(props: ParentProps) {
   return (
-    <html lang="en">
+    <html lang="ko">
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
-        <title>Solid App</title>
+        <link href="/fonts.css" rel="stylesheet" />
+        <title>{env.VITE_APP_NAME}</title>
         <HydrationScript />
       </head>
       <body>{props.children}</body>

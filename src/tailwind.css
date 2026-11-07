@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@theme {
+  --color-*: initial;
+  --color-white: #fff;
+  --color-black: #000;
+}
+@import "tailwindcss-radix-colors/dist/all-colors-only.css";
+
+@layer base {
+  :root {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color-scheme: light dark;
+    @apply tracking-tight;
+  }
+
+  body {
+    @apply bg-white dark:bg-black;
+  }
+}
+
+@theme {
+  --font-sans: P, "Pretendard Variable", Pretendard, system-ui, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+}

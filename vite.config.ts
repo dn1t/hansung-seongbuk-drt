@@ -1,4 +1,5 @@
 import solid from "@solidjs/vite-plugin";
+import tailwindcss from "@tailwindcss/vite";
 import { fileRoutes } from "filesystem-routing/vite";
 import { defineConfig } from "vite";
 
@@ -15,6 +16,7 @@ export default defineConfig({
       extensions: [".jsx", ".tsx"],
     }),
     fileRoutes({ httpMethods: true, types: true }),
+    tailwindcss(),
   ],
   server: { port: 3000 },
   build: {
