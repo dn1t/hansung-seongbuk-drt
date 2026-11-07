@@ -9,15 +9,16 @@
     "serve": "vite preview",
     "lint": "oxlint src",
     "fmt": "oxfmt src",
+    "colors": "node scripts/radix-colors.ts",
     "generate:auth": "pnpx auth generate -y --output src/lib/schema.ts",
     "generate:db": "drizzle-kit generate",
-    "generate:colors": "node scripts/radix-colors.ts",
     "generate": "pnpm run generate:auth && pnpm run generate:db",
     "migrate": "drizzle-kit migrate"
   },
   "license": "MIT",
   "devDependencies": {
     "@iconify-json/ph": "^1.2.2",
+    "@radix-ui/colors": "^3.0.0",
     "@solidjs/diagnostics": "^2.0.0-rc.21",
     "@solidjs/start-devtools": "^1.0.0-next.8",
     "@solidjs/vite-plugin": "^3.0.0-next.57",
