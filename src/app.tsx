@@ -1,11 +1,11 @@
 import { Title } from "@solidjs/meta";
-import { Loading } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
-import { Nav } from "./components/layout/nav";
+import { Root } from "./components/layout/root";
+import { TabBar } from "./components/layout/tab-bar";
+import { paths, Router } from "./router";
 
 import "./tailwind.css";
-import { paths, Router } from "./router";
 
 export default function App() {
   return (
@@ -13,12 +13,12 @@ export default function App() {
       {(props) => (
         <>
           <Title>{env.VITE_APP_NAME}</Title>
-          <Nav />
-          <nav class="site-nav">
+          {/* <nav class="site-nav">
             <a href={paths()}>Home</a>
             <a href={paths.users()}>Users</a>
-          </nav>
-          <Loading fallback={<main>Loading…</main>}>{props.children}</Loading>
+          </nav> */}
+          <Root>{props.children}</Root>
+          <TabBar />
         </>
       )}
     </Router>

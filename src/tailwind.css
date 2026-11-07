@@ -1,10 +1,5 @@
 @import "tailwindcss";
-@theme {
-  --color-*: initial;
-  --color-white: #fff;
-  --color-black: #000;
-}
-@import "tailwindcss-radix-colors/dist/all-colors-only.css";
+@import "./radix-colors.css";
 
 @layer base {
   :root {
@@ -17,7 +12,7 @@
   }
 
   body {
-    @apply bg-white dark:bg-black;
+    @apply bg-sand-1;
   }
 }
 
