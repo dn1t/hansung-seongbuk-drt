@@ -1,0 +1,14 @@
+minimumReleaseAgeExclude:
+  - solid-js
+  - "@solidjs/*"
+  - filesystem-routing
+permissions:
+  "@solidjs/diagnostics":
+    skills: true
+  "@solidjs/web":
+    skills: true
+  solid-js:
+    skills: [reactivity-diagnostics, solid-2.0, solid-2.0-cheatsheet]
+skills:
+  dirs:
+    - .claude/skills
