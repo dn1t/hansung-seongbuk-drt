@@ -1,7 +1,6 @@
 import { query } from "@solidjs/router";
 import { getRequestEvent, redirect } from "@solidjs/web";
 
-import { paths } from "../router";
 import { auth } from "./auth";
 
 export const getCurrentSession = query(async () => {
@@ -15,7 +14,10 @@ export const getCurrentSession = query(async () => {
 export const requireSession = query(async () => {
   "use server";
   const session = await getCurrentSession();
-  if (!session) throw redirect(paths["welcome"]());
+  if (!session) {
+    const { paths } = await import("../router");
+    throw redirect(paths["welcome"]());
+  }
 
   return session;
 }, "require-session");
