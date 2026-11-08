@@ -4,6 +4,7 @@ import { env } from "virtual:solid-env/client";
 
 import { Button } from "../components/common/button";
 import { Input } from "../components/common/input";
+import { Select } from "../components/common/select";
 
 function Header(props: { title: string; isInitialPage?: boolean; onBackClick?: () => void }) {
   return (
@@ -32,7 +33,7 @@ function Footer(props: { onClick: () => void; buttonLabel: string; children?: JS
 }
 
 export default function Welcome() {
-  const [page, setPage] = createSignal<"welcome" | "login" | "join">("login");
+  const [page, setPage] = createSignal<"welcome" | "login" | "join-1">("join-1");
 
   return (
     <div class="flex flex-1 flex-col px-5">
@@ -44,7 +45,7 @@ export default function Welcome() {
             시험기간과 축제기간에 운행하는 성북구 대학생 전용 심야 귀가 버스예요.
           </p>
         </div>
-        <Footer onClick={() => setPage("join")} buttonLabel="학교 이메일로 가입하기">
+        <Footer onClick={() => setPage("join-1")} buttonLabel="학교 이메일로 가입하기">
           <p class="mt-4 text-center text-sand-11">
             이미 계정이 있나요?{" "}
             <button onClick={() => setPage("login")} class="ml-0.5 cursor-pointer font-semibold text-amber-11">
@@ -63,7 +64,46 @@ export default function Welcome() {
               비밀번호를 잊었어요
             </button>
           </div>
-          <Footer onClick={() => setPage("join")} buttonLabel="로그인" />
+          <Footer onClick={() => setPage("join-1")} buttonLabel="로그인" />
+        </form>
+      </Show>
+      <Show when={page().startsWith("join-")}>
+        <Header title="학교 이메일을 알려 주세요" onBackClick={() => setPage("welcome")} />
+        <form class="flex flex-1 flex-col">
+          <div class="mt-4 flex flex-col gap-y-3.5">
+            <div class="flex">
+              <Input
+                type="email"
+                name="email"
+                label="학교 이메일"
+                placeholder="hamin"
+                class="rounded-r-none"
+                labelClass="relative z-20 flex-1 shrink-0 focus:z-30"
+              />
+              <label class="group z-10 mt-auto flex w-56 max-w-1/2 shrink-0 rounded-r-xl focus-within:z-20 focus-within:ring-2 focus-within:ring-amber-5">
+                <span class="flex h-13 items-center border-y border-l border-y-sand-4 border-l-transparent bg-sand-3 pl-4 text-lg text-sand-11 group-focus-within:border-y-amber-8 group-focus-within:border-l-amber-8">
+                  @
+                </span>
+                <Select
+                  class="w-full rounded-l-none border-l-0 bg-sand-3 pl-0.5 focus:ring-0"
+                  options={[
+                    "korea.ac.kr",
+                    "kookmin.ac.kr",
+                    "dongduk.ac.kr",
+                    "skuniv.ac.kr",
+                    "sungshin.ac.kr",
+                    "karts.ac.kr",
+                    "hansung.ac.kr",
+                    "dongbang.ac.kr",
+                  ]}
+                />
+              </label>
+            </div>
+          </div>
+          <Footer
+            onClick={() => setPage("join-1")}
+            buttonLabel={page() === "join-1" ? "인증 코드 받기" : "가입 완료"}
+          />
         </form>
       </Show>
     </div>
