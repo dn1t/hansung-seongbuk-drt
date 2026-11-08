@@ -8,5 +8,6 @@ export default defineConfig({
   rules: {
     ...solidV2.rules,
     "solid/jsx-no-undef": "off",
+    "typescript/consistent-type-imports": "warn",
   },
 });
