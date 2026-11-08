@@ -8,17 +8,17 @@ export function Root(props: { children: JSX.Element }) {
   const loc = useLocation();
 
   return (
-    <main class="mx-auto w-full max-w-xl">
+    <div class="mx-auto w-full max-w-xl">
       <div class="fixed top-0 bottom-0">
         <div class="relative -left-px h-full w-px bg-sand-3" />
       </div>
-      {props.children}
+      <main class="select-auto">{props.children}</main>
       <div class="fixed top-0 bottom-0">
         <div class="relative left-(--container-xl) h-full w-px bg-sand-3" />
       </div>
       <Show when={loc.pathname !== "/welcome"}>
         <TabBar />
       </Show>
-    </main>
+    </div>
   );
 }
