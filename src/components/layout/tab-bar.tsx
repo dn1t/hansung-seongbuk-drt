@@ -34,8 +34,10 @@ function Item(props: Item) {
 }
 export function TabBar() {
   return (
-    <nav class="fixed right-0 bottom-0 left-0 flex h-16 w-full items-center border-t border-t-sand-3 bg-sand-1/80">
-      <For each={items}>{(item) => <Item {...item} />}</For>
+    <nav class="fixed right-0 bottom-0 left-0 w-full">
+      <div class="mx-auto flex h-16 w-full max-w-xl items-center border-t border-t-sand-3 bg-sand-1/80">
+        <For each={items}>{(item) => <Item {...item} />}</For>
+      </div>
     </nav>
   );
 }
