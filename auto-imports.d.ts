@@ -8,5 +8,8 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const PhCalendarBlank: typeof import('~icons/ph/calendar-blank').default
   const PhMoon: typeof import('~icons/ph/moon').default
+  const PhQrCode: typeof import('~icons/ph/qr-code').default
+  const PhUser: typeof import('~icons/ph/user').default
 }

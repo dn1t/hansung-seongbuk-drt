@@ -5,7 +5,7 @@
   "sortImports": true,
   "sortTailwindcss": {
     "stylesheet": "./src/tailwind.css",
-    "functions": ["cn"]
+    "functions": ["tv", "cn", "cx"]
   },
   "ignorePatterns": []
 }
