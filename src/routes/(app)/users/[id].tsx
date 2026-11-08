@@ -2,7 +2,7 @@ import { Title } from "@solidjs/meta";
 import { type RouteDefinition, type RouteProps } from "@solidjs/router";
 import { Show, createMemo, isPending } from "solid-js";
 
-import { getCurrentUser, getUser, renameUser } from "../../lib/users";
+import { getCurrentUser, getUser, renameUser } from "../../../lib/users";
 
 export const route = {
   preload: ({ params }) => {

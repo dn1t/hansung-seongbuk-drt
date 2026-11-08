@@ -2,7 +2,7 @@ import { Title } from "@solidjs/meta";
 import type { RouteDefinition } from "@solidjs/router";
 import { For, Show, createMemo } from "solid-js";
 
-import { getCurrentUser, getUsers, login, logout } from "../lib/users";
+import { getCurrentUser, getUsers, login, logout } from "../../lib/users";
 
 export const route = {
   preload: () => {

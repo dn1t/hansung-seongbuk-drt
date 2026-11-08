@@ -2,8 +2,8 @@ import type { RouteDefinition } from "@solidjs/router";
 import type { ParentProps } from "solid-js";
 import { For, createMemo } from "solid-js";
 
-import { getUsers } from "../lib/users";
-import { paths } from "../router";
+import { getUsers } from "../../lib/users";
+import { paths } from "../../router";
 
 export const route = {
   preload: () => void getUsers(),
