@@ -12,7 +12,7 @@ export function Root(props: { children: JSX.Element }) {
       <div class="fixed top-0 bottom-0">
         <div class="relative -left-px h-full w-px bg-sand-3" />
       </div>
-      <main class="select-auto">{props.children}</main>
+      <main class="flex h-full min-h-dvh flex-col select-auto">{props.children}</main>
       <div class="fixed top-0 bottom-0">
         <div class="relative left-(--container-xl) h-full w-px bg-sand-3" />
       </div>

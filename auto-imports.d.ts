@@ -9,6 +9,7 @@
 export {}
 declare global {
   const PhCalendarBlank: typeof import('~icons/ph/calendar-blank').default
+  const PhCaretLeft: typeof import('~icons/ph/caret-left').default
   const PhMoon: typeof import('~icons/ph/moon').default
   const PhQrCode: typeof import('~icons/ph/qr-code').default
   const PhUser: typeof import('~icons/ph/user').default
