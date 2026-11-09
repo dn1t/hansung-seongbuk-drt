@@ -26,7 +26,7 @@ export function Button(props: ButtonProps) {
   return (
     <button
       {...rest}
-      disabled={props.disabled || props.variant === "disabled"}
+      disabled={props.disabled || props.variant === "disabled" || props.variant === "loading"}
       class={button({ variant: props.variant, class: props.class as any })}
     >
       <Show when={props.variant === "loading"}>

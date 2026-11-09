@@ -11,6 +11,7 @@ import { authClient } from "../lib/auth-client";
 import { getJoinState, getWelcomeState, type JoinState, type JoinStep } from "../lib/join";
 import { isValidPassword, PASSWORD_MAX_LENGTH } from "../lib/password";
 import { SCHOOL_DOMAINS, schoolOf } from "../lib/schools";
+import { revalidateSession } from "../lib/session";
 
 export type WelcomePage = "welcome" | "login" | "reset-password" | JoinStep;
 type Page = WelcomePage;
@@ -20,7 +21,8 @@ export interface WelcomeLocationState {
   notice?: string;
 }
 
-function pageFor(state: JoinState): Page {
+function pageFor(state: JoinState | undefined): Page | undefined {
+  if (!state) return undefined;
   return state.step === "join-1" ? "welcome" : state.step;
 }
 
@@ -29,9 +31,9 @@ export default function Welcome() {
   const loc = useLocation<WelcomeLocationState>();
   const entry = untrack(() => loc.state);
 
-  const [joinState, setJoinState] = createSignal<JoinState>(() => getWelcomeState());
+  const [joinState, setJoinState] = createSignal<JoinState | undefined>(() => getWelcomeState());
   const [manualPage, setManualPage] = createSignal<Page | undefined>(entry?.page);
-  const page = createMemo<Page>(() => manualPage() ?? pageFor(joinState()));
+  const page = createMemo(() => (joinState() ? (manualPage() ?? pageFor(joinState())) : undefined));
 
   function go(next: Page) {
     setError("");
@@ -40,7 +42,9 @@ export default function Welcome() {
   }
 
   function followJoinState(next: JoinState) {
+    revalidateSession();
     setNow(Date.now());
+    setCodeLocked(false);
     setJoinState(next);
     setManualPage(undefined);
   }
@@ -53,9 +57,10 @@ export default function Welcome() {
   const [error, setError] = createSignal("");
   const [notice, setNotice] = createSignal(entry?.notice ?? "");
 
-  const email = () => joinState().email ?? "";
+  const email = () => joinState()?.email ?? "";
   const [emailLocal, setEmailLocal] = createSignal("");
   const [code, setCode] = createSignal("");
+  const [codeLocked, setCodeLocked] = createSignal(false);
   const [name, setName] = createSignal("");
   const [password, setPassword] = createSignal("");
   const [loginEmail, setLoginEmail] = createSignal("");
@@ -82,8 +87,9 @@ export default function Welcome() {
       clearTimeout(addressSearchTimer);
     };
   });
-  const remaining = createMemo(() => Math.max(0, Math.ceil(((joinState().codeExpiresAt ?? 0) - now()) / 1000)));
+  const remaining = createMemo(() => Math.max(0, Math.ceil(((joinState()?.codeExpiresAt ?? 0) - now()) / 1000)));
   const remainingLabel = () => `${Math.floor(remaining() / 60)}:${String(remaining() % 60).padStart(2, "0")}`;
+  const canResend = () => remaining() === 0 || codeLocked();
 
   async function sendVerificationCode(address: string) {
     const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
@@ -102,7 +108,10 @@ export default function Welcome() {
     if (!error) return;
     if (error.code === "INVALID_OTP") throw new Error("코드가 맞지 않아요. 다시 확인해 주세요.");
     if (error.code === "OTP_EXPIRED") throw new Error("코드가 만료됐어요. 다시 보내기를 눌러 주세요.");
-    if (error.code === "TOO_MANY_ATTEMPTS") throw new Error("시도 횟수를 넘었어요. 다시 보내기를 눌러 주세요.");
+    if (error.code === "TOO_MANY_ATTEMPTS") {
+      setCodeLocked(true);
+      throw new Error("시도 횟수를 넘었어요. 다시 보내기를 눌러 주세요.");
+    }
     if (error.status === 429) throw new Error("요청이 너무 많아요. 잠시 후 다시 시도해 주세요.");
     throw new Error(error.message ?? "코드를 확인하지 못했어요. 다시 시도해 주세요.");
   }
@@ -116,6 +125,7 @@ export default function Welcome() {
     }
     const next = await getJoinState();
     if (next.step === "complete") {
+      revalidateSession();
       nav("/", { replace: true });
       return;
     }
@@ -270,6 +280,7 @@ export default function Welcome() {
                 .split("@")[0]
                 .trim();
               const address = `${local}@${form.get("domain")}`.toLowerCase();
+              setCode("");
               setError("");
               setLoading(true);
               sendVerificationCode(address)
@@ -344,8 +355,8 @@ export default function Welcome() {
                 <span class="px-0.75 text-sand-10">·</span>{" "}
                 <button
                   type="button"
-                  disabled={remaining() > 0}
-                  class={remaining() > 0 ? "cursor-not-allowed text-sand-10" : "cursor-pointer text-amber-11"}
+                  disabled={!canResend()}
+                  class={canResend() ? "cursor-pointer text-amber-11" : "cursor-not-allowed text-sand-10"}
                   onClick={() => {
                     setError("");
                     sendVerificationCode(email()).then(syncJoinState).catch(showError);
@@ -522,7 +533,7 @@ export default function Welcome() {
           <div class="px-1">
             <PhCheckCircle class="mt-14 text-4xl text-green-11" />
             <h1 class="mt-7 mb-2 text-3xl font-bold">
-              {joinState().name} 님,
+              {joinState()?.name} 님,
               <br />
               가입을 마쳤어요
             </h1>

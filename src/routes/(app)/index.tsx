@@ -1,5 +1,5 @@
 import { Title } from "@solidjs/meta";
-import { useNavigate } from "@solidjs/router";
+import { revalidate, useNavigate } from "@solidjs/router";
 import { createMemo, Show } from "solid-js";
 
 import { authClient } from "../../lib/auth-client";
@@ -11,6 +11,7 @@ export default function Home() {
 
   async function signOut() {
     await authClient.signOut();
+    revalidate();
     nav("/welcome", { replace: true });
   }
 

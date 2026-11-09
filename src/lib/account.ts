@@ -37,6 +37,7 @@ export async function setupAccount(name: string, password: string): Promise<Setu
     } catch (err) {
       if (!(err instanceof APIError && err.body?.code === "PASSWORD_ALREADY_SET")) throw err;
       await ctx.internalAdapter.updatePassword(user.id, await ctx.password.hash(password));
+      await auth.api.revokeOtherSessions({ headers });
     }
     await auth.api.updateUser({ headers, body: { name } });
     return done({ ok: true });

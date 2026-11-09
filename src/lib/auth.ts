@@ -18,9 +18,11 @@ export const auth = betterAuth({
     .map((origin) => origin.trim())
     .filter(Boolean),
   database: drizzleAdapter(db, { provider: "sqlite", schema, usePlural: true }),
-  advanced: { database: { joins: true } },
+  rateLimit: { enabled: true, storage: "database" },
+  advanced: { database: { joins: true }, ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] } },
   emailAndPassword: {
     enabled: true,
+    disableSignUp: true,
     resetPasswordTokenExpiresIn: 60 * 60,
     revokeSessionsOnPasswordReset: true,
     async sendResetPassword({ user, url }) {

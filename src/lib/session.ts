@@ -1,4 +1,4 @@
-import { query } from "@solidjs/router";
+import { query, revalidate } from "@solidjs/router";
 import { getRequestEvent, redirect } from "@solidjs/web";
 
 import { auth } from "./auth";
@@ -22,3 +22,7 @@ export const requireSession = query(async () => {
 
   return session;
 }, "require-session");
+
+export function revalidateSession() {
+  revalidate([getCurrentSession.key, requireSession.key]);
+}

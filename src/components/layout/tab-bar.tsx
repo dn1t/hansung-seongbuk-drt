@@ -20,7 +20,10 @@ const items: Item[] = [
 
 function Item(props: Item) {
   const loc = useLocation();
-  const selected = () => (loc.pathname === "/" ? loc.pathname === props.href : props.href.startsWith(loc.pathname));
+  const selected = () =>
+    props.href === "/"
+      ? loc.pathname === "/"
+      : loc.pathname === props.href || loc.pathname.startsWith(`${props.href}/`);
 
   return (
     <a
