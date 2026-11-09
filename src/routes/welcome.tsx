@@ -4,6 +4,7 @@ import { env } from "virtual:solid-env/client";
 
 import { Button } from "../components/common/button";
 import { Input } from "../components/common/input";
+import { OTPInput } from "../components/common/otp-input";
 import { Select } from "../components/common/select";
 
 function Header(props: { title: string; isInitialPage?: boolean; onBackClick?: () => void }) {
@@ -39,7 +40,7 @@ function Footer(props: {
 }
 
 export default function Welcome() {
-  const [page, setPage] = createSignal<"welcome" | "login" | "join-1" | "join-2">("join-1");
+  const [page, setPage] = createSignal<"welcome" | "login" | "join-1" | "join-2">("join-2");
   const [loading, setLoading] = createSignal(false);
 
   const [email, setEmail] = createSignal("");
@@ -85,7 +86,7 @@ export default function Welcome() {
           <Footer type="submit" onClick={() => setPage("join-1")} buttonLabel="로그인" />
         </form>
       </Show>
-      <Show when={page().startsWith("join-")}>
+      <Show when={page() === "join-1"}>
         <Header title="학교 이메일을 알려 주세요" onBackClick={() => setPage("welcome")} />
         <form
           class="flex flex-1 flex-col"
@@ -128,9 +129,33 @@ export default function Welcome() {
               </label>
             </div>
           </div>
-          <Show when={page() === "join-1"}>
-            <Footer type="submit" buttonLabel={"인증 코드 받기"} variant={loading() ? "loading" : "primary"} />
-          </Show>
+          <Footer type="submit" buttonLabel="인증 코드 받기" variant={loading() ? "loading" : "primary"} />
+        </form>
+      </Show>
+      <Show when={page() === "join-2"}>
+        <Header title="메일로 받은 코드를 입력해 주세요" onBackClick={() => setPage("join-1")} />
+        <form
+          class="flex flex-1 flex-col"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setLoading(true);
+            sendVerificationCode().then(() => {
+              setPage("join-2");
+              setLoading(false);
+            });
+          }}
+        >
+          <div class="mt-4 flex flex-col gap-y-3.5">
+            <span class="mb-2 px-1 text-xl font-semibold text-sand-11">hamin@korea.ac.kr</span>
+            <OTPInput name="code" autofocus />
+            <span class="mt-1 px-1 text-lg font-medium text-sand-11">
+              <span class="tabular-nums">2:41</span> 남음 <span class="px-0.75 text-sand-10">·</span>{" "}
+              <button type="button" class="text-amber-11">
+                다시 보내기
+              </button>
+            </span>
+          </div>
+          <Footer type="submit" buttonLabel="확인" variant={loading() ? "loading" : "primary"} />
         </form>
       </Show>
     </div>
