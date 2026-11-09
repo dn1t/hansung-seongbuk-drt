@@ -24,6 +24,8 @@ declare module 'virtual:solid-env/server' {
     readonly "BASE_URL": __Out<__Schema["server"]["BASE_URL"]>;
     readonly "TURSO_CONNECTION_URL": __Out<__Schema["server"]["TURSO_CONNECTION_URL"]>;
     readonly "TURSO_AUTH_TOKEN": __Out<__Schema["server"]["TURSO_AUTH_TOKEN"]>;
+    readonly "MAILGUN_API_KEY": __Out<__Schema["server"]["MAILGUN_API_KEY"]>;
+    readonly "MAILGUN_DOMAIN": __Out<__Schema["server"]["MAILGUN_DOMAIN"]>;
     readonly "VITE_APP_NAME": __Out<__Schema["client"]["VITE_APP_NAME"]>;
   };
   export { env };
