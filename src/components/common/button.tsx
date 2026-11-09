@@ -1,5 +1,5 @@
 import type { ComponentProps } from "@solidjs/web";
-import { omit } from "solid-js";
+import { omit, Show } from "solid-js";
 import { tv, type VariantProps } from "tailwind-variants";
 
 const button = tv({
@@ -7,6 +7,7 @@ const button = tv({
   variants: {
     variant: {
       primary: "bg-amber-9 text-[#21201c]",
+      loading: "flex cursor-progress items-center justify-center gap-x-2 bg-amber-8 text-[#21201c]",
     },
   },
   defaultVariants: {
@@ -23,6 +24,9 @@ export function Button(props: ButtonProps) {
 
   return (
     <button {...rest} class={button({ variant: props.variant, class: props.class as any })}>
+      <Show when={props.variant === "loading"}>
+        <PhCircleNotch class="mt-px animate-spin text-lg" />
+      </Show>
       {props.children}
     </button>
   );

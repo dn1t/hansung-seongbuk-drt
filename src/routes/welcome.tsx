@@ -1,4 +1,4 @@
-import type { JSX } from "@solidjs/web";
+import type { ComponentProps, JSX } from "@solidjs/web";
 import { createSignal, Show } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
@@ -21,10 +21,16 @@ function Header(props: { title: string; isInitialPage?: boolean; onBackClick?: (
   );
 }
 
-function Footer(props: { onClick: () => void; buttonLabel: string; children?: JSX.Element }) {
+function Footer(props: {
+  type: "submit" | "button";
+  onClick?: () => void;
+  buttonLabel: string;
+  children?: JSX.Element;
+  variant?: ComponentProps<typeof Button>["variant"];
+}) {
   return (
     <div class="mt-auto px-1 pb-7">
-      <Button class="w-full" onClick={props.onClick}>
+      <Button type={props.type} class="w-full" onClick={props.onClick} variant={props.variant}>
         {props.buttonLabel}
       </Button>
       {props.children}
@@ -33,7 +39,15 @@ function Footer(props: { onClick: () => void; buttonLabel: string; children?: JS
 }
 
 export default function Welcome() {
-  const [page, setPage] = createSignal<"welcome" | "login" | "join-1">("join-1");
+  const [page, setPage] = createSignal<"welcome" | "login" | "join-1" | "join-2">("join-1");
+  const [loading, setLoading] = createSignal(false);
+
+  const [email, setEmail] = createSignal("");
+
+  async function sendVerificationCode() {
+    /// TODO: Send verification code to the email
+    return await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 
   return (
     <div class="flex flex-1 flex-col px-5">
@@ -45,10 +59,14 @@ export default function Welcome() {
             시험기간과 축제기간에 운행하는 성북구 대학생 전용 심야 귀가 버스예요.
           </p>
         </div>
-        <Footer onClick={() => setPage("join-1")} buttonLabel="학교 이메일로 가입하기">
+        <Footer type="button" onClick={() => setPage("join-1")} buttonLabel="학교 이메일로 가입하기">
           <p class="mt-4 text-center text-sand-11">
             이미 계정이 있나요?{" "}
-            <button onClick={() => setPage("login")} class="ml-0.5 cursor-pointer font-semibold text-amber-11">
+            <button
+              type="button"
+              onClick={() => setPage("login")}
+              class="ml-0.5 cursor-pointer font-semibold text-amber-11"
+            >
               로그인
             </button>
           </p>
@@ -64,12 +82,22 @@ export default function Welcome() {
               비밀번호를 잊었어요
             </button>
           </div>
-          <Footer onClick={() => setPage("join-1")} buttonLabel="로그인" />
+          <Footer type="submit" onClick={() => setPage("join-1")} buttonLabel="로그인" />
         </form>
       </Show>
       <Show when={page().startsWith("join-")}>
         <Header title="학교 이메일을 알려 주세요" onBackClick={() => setPage("welcome")} />
-        <form class="flex flex-1 flex-col">
+        <form
+          class="flex flex-1 flex-col"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setLoading(true);
+            sendVerificationCode().then(() => {
+              setPage("join-2");
+              setLoading(false);
+            });
+          }}
+        >
           <div class="mt-4 flex flex-col gap-y-3.5">
             <div class="flex">
               <Input
@@ -100,10 +128,9 @@ export default function Welcome() {
               </label>
             </div>
           </div>
-          <Footer
-            onClick={() => setPage("join-1")}
-            buttonLabel={page() === "join-1" ? "인증 코드 받기" : "가입 완료"}
-          />
+          <Show when={page() === "join-1"}>
+            <Footer type="submit" buttonLabel={"인증 코드 받기"} variant={loading() ? "loading" : "primary"} />
+          </Show>
         </form>
       </Show>
     </div>
