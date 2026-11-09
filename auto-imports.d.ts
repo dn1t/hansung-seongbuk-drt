@@ -13,8 +13,11 @@ declare global {
   const PhCheck: typeof import('~icons/ph/check').default
   const PhCheckCircle: typeof import('~icons/ph/check-circle').default
   const PhCircleNotch: typeof import('~icons/ph/circle-notch').default
+  const PhLockSimple: typeof import('~icons/ph/lock-simple').default
+  const PhMagnifyingGlass: typeof import('~icons/ph/magnifying-glass').default
   const PhMoon: typeof import('~icons/ph/moon').default
   const PhQrCode: typeof import('~icons/ph/qr-code').default
+  const PhSearch: typeof import('~icons/ph/search').default
   const PhUser: typeof import('~icons/ph/user').default
   const PhX: typeof import('~icons/ph/x').default
 }
