@@ -67,7 +67,7 @@ export function Footer(props: {
   variant?: ComponentProps<typeof Button>["variant"];
 }) {
   return (
-    <div class="mt-auto px-1 pb-7">
+    <div class="mt-auto pb-7">
       <Button type={props.type} class="w-full" onClick={props.onClick} variant={props.variant}>
         {props.buttonLabel}
       </Button>
