@@ -28,7 +28,7 @@ function Item(props: Item) {
   return (
     <a
       href={props.href}
-      class={cn("flex w-full flex-col items-center gap-y-1 pt-0.5 text-sand-9", selected() && "text-sand-12")}
+      class={cn("flex w-full flex-col items-center gap-y-1 pt-0.5 text-sand-10", selected() && "text-sand-12")}
     >
       <props.icon class="text-lg" />
       <span class="text-xs font-medium">{props.label}</span>

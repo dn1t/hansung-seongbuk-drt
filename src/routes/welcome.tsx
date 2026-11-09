@@ -234,7 +234,7 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "reset-password"}>
-          <Header title="비밀번호 재설정" onBackClick={() => go("welcome")} />
+          <Header title="비밀번호 재설정" onBackClick={() => go("login")} />
           <form
             class="flex flex-1 flex-col"
             onSubmit={(e) => {
@@ -270,7 +270,7 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "join-1"}>
-          <Header title="학교 이메일을 알려 주세요" onBackClick={() => go("welcome")} />
+          <Header title="학교 이메일을 알려 주세요" step={{ current: 1, total: 4 }} onBackClick={() => go("welcome")} />
           <form
             class="flex flex-1 flex-col"
             onSubmit={(e) => {
@@ -328,6 +328,7 @@ export default function Welcome() {
         <Show when={page() === "join-2"}>
           <Header
             title="메일로 받은 코드를 입력해 주세요"
+            step={{ current: 2, total: 4 }}
             onBackClick={() => {
               go("join-1");
               void authClient.$fetch("/join/reset", { method: "POST" });
@@ -373,7 +374,7 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "join-3"}>
-          <Header title="이름과 비밀번호를 정해 주세요" isInitialPage />
+          <Header title="이름과 비밀번호를 정해 주세요" step={{ current: 3, total: 4 }} isInitialPage />
           <form
             class="flex flex-1 flex-col"
             onSubmit={(e) => {
@@ -424,7 +425,7 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "join-4"}>
-          <Header title="집 주소를 알려 주세요" onBackClick={() => go("join-3")} />
+          <Header title="집 주소를 알려 주세요" step={{ current: 4, total: 4 }} onBackClick={() => go("join-3")} />
           <form
             class="flex min-h-0 flex-1 flex-col"
             onSubmit={(e) => {
