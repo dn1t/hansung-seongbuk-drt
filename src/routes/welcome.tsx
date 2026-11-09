@@ -40,7 +40,7 @@ function Footer(props: {
   );
 }
 
-const PAGES = ["welcome", "login", "join-1", "join-2", "join-3", "join-4", "complete"] as const;
+const PAGES = ["welcome", "login", "reset-password", "join-1", "join-2", "join-3", "join-4", "complete"] as const;
 type Page = (typeof PAGES)[number];
 
 const FLOW = ["join-1", "join-2", "join-3", "join-4", "complete"] as const satisfies Page[];
@@ -142,11 +142,25 @@ export default function Welcome() {
           <div class="mt-4 flex flex-col gap-y-3.5">
             <Input type="email" name="email" label="학교 이메일" placeholder="hamin@hansung.ac.kr" />
             <Input type="password" name="password" label="비밀번호" placeholder="••••••••" labelClass="mt-1.5" />
-            <button class="w-full cursor-pointer pl-1 text-start font-semibold text-amber-11">
+            <button
+              type="button"
+              class="w-full cursor-pointer pl-1 text-start font-semibold text-amber-11"
+              onClick={() => goTo("reset-password")}
+            >
               비밀번호를 잊었어요
             </button>
           </div>
           <Footer type="submit" onClick={() => goTo("join-1")} buttonLabel="로그인" />
+        </form>
+      </Show>
+      <Show when={page() === "reset-password"}>
+        <Header title="비밀번호 재설정" onBackClick={() => goBack("welcome")} />
+        <form class="flex flex-1 flex-col">
+          <span class="my-4 px-1 font-medium text-balance break-keep text-sand-11">
+            가입한 학교 이메일로 새 비밀번호를 정하는 링크를 보내드려요.
+          </span>
+          <Input type="email" name="email" label="학교 이메일" placeholder="hamin@hansung.ac.kr" labelClass="mt-4" />
+          <Footer type="submit" onClick={() => goTo("login")} buttonLabel="링크 보내기" />
         </form>
       </Show>
       <Show when={page() === "join-1"}>
