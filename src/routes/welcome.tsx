@@ -335,9 +335,9 @@ export default function Welcome() {
             }}
           >
             <div class="mt-4 flex flex-col gap-y-3.5">
-              <span class="mb-2 px-1 text-xl font-semibold text-sand-11">{email()}</span>
+              <span class="mb-2 px-1 text-lg font-semibold text-sand-11">{email()}</span>
               <OTPInput name="code" autofocus onInput={setCode} />
-              <span class="mt-1 px-1 text-lg font-medium text-sand-11">
+              <span class="mt-1 px-1 text-sm font-medium text-sand-11">
                 <Show when={remaining() > 0} fallback="코드가 만료됐어요">
                   <span class="tabular-nums">{remainingLabel()}</span> 남음
                 </Show>{" "}
@@ -376,7 +376,7 @@ export default function Welcome() {
             }}
           >
             <div class="mt-4 flex flex-col gap-y-3.5">
-              <div class="mb-4 flex items-center gap-x-1.5 px-1 text-lg text-green-11">
+              <div class="mb-4 flex items-center gap-x-1.5 px-1 text-green-11">
                 <PhCheckCircle />
                 <span class="leading-none font-semibold text-green-11">{schoolOf(email())} 학생으로 확인됐어요</span>
               </div>
@@ -428,7 +428,7 @@ export default function Welcome() {
             }}
           >
             <div class="mt-4 flex min-h-0 flex-1 flex-col gap-y-3.5">
-              <span class="mb-4 px-1 text-lg leading-none font-medium text-sand-11">
+              <span class="mb-4 px-1 leading-none font-medium text-sand-11">
                 집에서 가장 가까운 정류장을 찾는 데 써요.
               </span>
               <Input
@@ -509,8 +509,8 @@ export default function Welcome() {
                 <p class="px-1 font-medium text-red-11">{error()}</p>
               </Show>
               <div class="flex items-center gap-x-1.5 px-1 pb-8 text-sand-11">
-                <PhLockSimple class="shrink-0 text-sm" />
-                <span class="text-balance break-keep">
+                <PhLockSimple class="shrink-0 text-xs" />
+                <span class="text-sm text-balance break-keep">
                   주소는 노선을 짤 때만 사용되며, 기사님이나 다른 사용자에게는 보이지 않아요.
                 </span>
               </div>

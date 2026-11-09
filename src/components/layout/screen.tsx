@@ -22,17 +22,17 @@ export function Header(props: { title: string; isInitialPage?: boolean; onBackCl
 
 export function PasswordRules(props: { password: string }) {
   return (
-    <div class="flex items-center gap-x-3 px-1">
+    <div class="flex items-center gap-x-2.5 px-1 text-sm">
       <For each={PASSWORD_RULES}>
         {(rule) => (
           <div
             class={[
-              "flex items-center gap-x-1.5",
+              "flex items-center gap-x-1",
               !props.password ? "text-sand-10" : rule.test(props.password) ? "text-green-11" : "text-red-11",
             ]}
           >
-            <Show when={!props.password || rule.test(props.password)} fallback={<PhX class="text-sm" />}>
-              <PhCheck class="text-sm" />
+            <Show when={!props.password || rule.test(props.password)} fallback={<PhX class="text-xs" />}>
+              <PhCheck class="text-xs" />
             </Show>
             <span>{rule.label}</span>
           </div>
