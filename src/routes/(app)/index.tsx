@@ -1,19 +1,18 @@
 import { Title } from "@solidjs/meta";
-import type { RouteDefinition } from "@solidjs/router";
-import { For, Show, createMemo } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { createMemo, Show } from "solid-js";
 
-import { getCurrentUser, getUsers, login, logout } from "../../lib/users";
-
-export const route = {
-  preload: () => {
-    void getCurrentUser();
-    void getUsers();
-  },
-} satisfies RouteDefinition;
+import { authClient } from "../../lib/auth-client";
+import { getCurrentSession } from "../../lib/session";
 
 export default function Home() {
-  const me = createMemo(() => getCurrentUser());
-  const users = createMemo(() => getUsers());
+  const nav = useNavigate();
+  const session = createMemo(() => getCurrentSession());
+
+  async function signOut() {
+    await authClient.signOut();
+    nav("/welcome", { replace: true });
+  }
 
   return (
     <main>
@@ -22,23 +21,14 @@ export default function Home() {
       <p>
         Edit <code>src/routes/index.tsx</code> and save to reload.
       </p>
-      {/* The session pillar: login/logout are form actions posting to server
-          functions — plain form posts, so they work before hydration too. */}
-      <Show
-        when={me()}
-        fallback={
-          <form action={login} method="post">
-            <select name="id">
-              <For each={users()}>{(user) => <option value={user.id}>{user.name}</option>}</For>
-            </select>{" "}
-            <button type="submit">Sign in</button>
-          </form>
-        }
-      >
-        {(user) => (
-          <form action={logout} method="post">
-            Signed in as {user().name}. <button type="submit">Sign out</button>
-          </form>
+      <Show when={session()}>
+        {(current) => (
+          <p>
+            Signed in as {current().user.name}.{" "}
+            <button type="button" onClick={signOut}>
+              Sign out
+            </button>
+          </p>
         )}
       </Show>
       <a href="https://v2.solidjs.com/" target="_blank" rel="noopener noreferrer">

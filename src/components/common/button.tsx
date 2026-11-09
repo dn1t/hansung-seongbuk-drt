@@ -8,6 +8,7 @@ const button = tv({
     variant: {
       primary: "bg-amber-9 text-[#21201c]",
       loading: "flex cursor-progress items-center justify-center gap-x-2 bg-amber-8 text-[#21201c]",
+      disabled: "cursor-not-allowed bg-sand-4 text-sand-9",
     },
   },
   defaultVariants: {
@@ -23,7 +24,11 @@ export function Button(props: ButtonProps) {
   const rest = omit(props, "children", "class");
 
   return (
-    <button {...rest} class={button({ variant: props.variant, class: props.class as any })}>
+    <button
+      {...rest}
+      disabled={props.disabled || props.variant === "disabled"}
+      class={button({ variant: props.variant, class: props.class as any })}
+    >
       <Show when={props.variant === "loading"}>
         <PhCircleNotch class="mt-px animate-spin text-lg" />
       </Show>

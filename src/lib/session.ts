@@ -2,6 +2,7 @@ import { query } from "@solidjs/router";
 import { getRequestEvent, redirect } from "@solidjs/web";
 
 import { auth } from "./auth";
+import { getJoinState } from "./join";
 
 export const getCurrentSession = query(async () => {
   "use server";
@@ -13,8 +14,8 @@ export const getCurrentSession = query(async () => {
 
 export const requireSession = query(async () => {
   "use server";
-  const session = await getCurrentSession();
-  if (!session) {
+  const [session, join] = await Promise.all([getCurrentSession(), getJoinState()]);
+  if (!session || join.step !== "complete") {
     const { paths } = await import("../router");
     throw redirect(paths["welcome"]());
   }
