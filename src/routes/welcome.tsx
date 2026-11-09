@@ -1,10 +1,21 @@
 import { useLocation, useNavigate } from "@solidjs/router";
-import { createMemo, createSignal, Errored, For, isPending, Loading, onSettled, Show, untrack } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  Errored,
+  For,
+  isHydrating,
+  isPending,
+  Loading,
+  onSettled,
+  Show,
+  untrack,
+} from "solid-js";
 
 import { Input } from "../components/common/input";
 import { OTPInput } from "../components/common/otp-input";
 import { Select } from "../components/common/select";
-import { Footer, Header, PasswordRules } from "../components/layout/screen";
+import { Footer, Header, PasswordRules, RouteDots } from "../components/layout/screen";
 import { NAME_MAX_LENGTH, setupAccount } from "../lib/account";
 import { ADDRESS_DETAIL_MAX_LENGTH, type AddressResult, saveHomeAddress, searchAddress } from "../lib/address";
 import { authClient } from "../lib/auth-client";
@@ -30,9 +41,10 @@ export default function Welcome() {
   const nav = useNavigate();
   const loc = useLocation<WelcomeLocationState>();
   const entry = untrack(() => loc.state);
+  const hydrating = isHydrating();
 
   const [joinState, setJoinState] = createSignal<JoinState | undefined>(() => getWelcomeState());
-  const [manualPage, setManualPage] = createSignal<Page | undefined>(entry?.page);
+  const [manualPage, setManualPage] = createSignal<Page | undefined>(hydrating ? undefined : entry?.page);
   const page = createMemo(() => (joinState() ? (manualPage() ?? pageFor(joinState())) : undefined));
 
   function go(next: Page) {
@@ -55,7 +67,7 @@ export default function Welcome() {
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal("");
-  const [notice, setNotice] = createSignal(entry?.notice ?? "");
+  const [notice, setNotice] = createSignal(hydrating ? "" : (entry?.notice ?? ""));
 
   const email = () => joinState()?.email ?? "";
   const [emailLocal, setEmailLocal] = createSignal("");
@@ -81,6 +93,10 @@ export default function Welcome() {
 
   const [now, setNow] = createSignal(Date.now());
   onSettled(() => {
+    if (hydrating && entry?.page) {
+      setManualPage(entry.page);
+      setNotice(entry.notice ?? "");
+    }
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       clearInterval(timer);
@@ -160,9 +176,12 @@ export default function Welcome() {
       <div class={["flex flex-col px-5", page() === "join-4" ? "h-dvh" : "flex-1"]}>
         <Show when={page() === "welcome"}>
           <Header title="" isInitialPage />
-          <div class="mt-30 flex max-w-5/6 flex-col gap-y-6 px-1">
-            <h1 class="text-4xl leading-11 font-bold text-balance break-keep">막차 때문에 먼저 일어나지 않아도 돼요</h1>
-            <p class="text-lg leading-7 text-balance break-keep text-sand-11">
+          <div class="flex flex-1 flex-col justify-end px-1 pt-16 pb-6">
+            <RouteDots current={1} total={4} spacing="wide" />
+            <h1 class="mt-7 max-w-72 text-[40px] leading-12 font-bold tracking-[-0.03em] text-balance break-keep">
+              막차 때문에 먼저 일어나지 않아도 돼요
+            </h1>
+            <p class="mt-4 max-w-80 text-lg leading-7 text-balance break-keep text-sand-11">
               시험기간과 축제기간에 운행하는 성북구 대학생 전용 심야 귀가 버스예요.
             </p>
           </div>
@@ -214,7 +233,7 @@ export default function Welcome() {
               />
               <button
                 type="button"
-                class="w-full cursor-pointer pl-1 text-start font-semibold text-amber-11"
+                class="w-max cursor-pointer px-1 text-start font-semibold text-amber-11"
                 onClick={() => go("reset-password")}
               >
                 비밀번호를 잊었어요
@@ -234,7 +253,11 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "reset-password"}>
-          <Header title="비밀번호 재설정" onBackClick={() => go("login")} />
+          <Header
+            title="비밀번호 재설정"
+            description="가입한 학교 이메일로 새 비밀번호를 정하는 링크를 보내드려요."
+            onBackClick={() => go("login")}
+          />
           <form
             class="flex flex-1 flex-col"
             onSubmit={(e) => {
@@ -247,9 +270,6 @@ export default function Welcome() {
                 .finally(() => setLoading(false));
             }}
           >
-            <span class="my-4 px-1 font-medium text-balance break-keep text-sand-11">
-              가입한 학교 이메일로 새 비밀번호를 정하는 링크를 보내드려요.
-            </span>
             <Input
               type="email"
               name="email"
@@ -304,7 +324,7 @@ export default function Welcome() {
                   labelClass="relative z-20 flex-1 shrink-0 focus:z-30"
                 />
                 <label class="group z-10 mt-auto flex w-56 max-w-1/2 shrink-0 rounded-r-xl focus-within:z-20 focus-within:ring-2 focus-within:ring-amber-5">
-                  <span class="flex h-13 items-center border-y border-l border-y-sand-4 border-l-transparent bg-sand-3 pl-4 text-lg text-sand-11 group-focus-within:border-y-amber-8 group-focus-within:border-l-amber-8">
+                  <span class="flex h-13 items-center border-y border-l border-y-sand-5 border-l-transparent bg-sand-3 pl-4 text-lg text-sand-11 group-focus-within:border-y-amber-8 group-focus-within:border-l-amber-8">
                     @
                   </span>
                   <Select
@@ -425,7 +445,12 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "join-4"}>
-          <Header title="집 주소를 알려 주세요" step={{ current: 4, total: 4 }} onBackClick={() => go("join-3")} />
+          <Header
+            title="집 주소를 알려 주세요"
+            description="집에서 가장 가까운 정류장을 찾는 데 써요."
+            step={{ current: 4, total: 4 }}
+            onBackClick={() => go("join-3")}
+          />
           <form
             class="flex min-h-0 flex-1 flex-col"
             onSubmit={(e) => {
@@ -440,9 +465,6 @@ export default function Welcome() {
             }}
           >
             <div class="mt-4 flex min-h-0 flex-1 flex-col gap-y-3.5">
-              <span class="mb-4 px-1 leading-none font-medium text-sand-11">
-                집에서 가장 가까운 정류장을 찾는 데 써요.
-              </span>
               <Input
                 type="search"
                 name="search"
@@ -471,7 +493,7 @@ export default function Welcome() {
                       fallback={
                         <span class="m-auto text-sand-10">
                           {addressQuery().length < 2
-                            ? "주소를 입력해주세요."
+                            ? "주소를 입력해 주세요."
                             : isPending(() => addressResults())
                               ? "검색 중…"
                               : "검색 결과가 없어요."}
@@ -493,7 +515,7 @@ export default function Welcome() {
                                   "flex w-full cursor-pointer flex-col gap-y-0.5 rounded-xl border px-4 py-3 text-start",
                                   selectedAddress()?.id === result.id
                                     ? "border-amber-8 bg-amber-2 ring-2 ring-amber-5"
-                                    : "border-sand-4 bg-sand-2",
+                                    : "border-sand-5 bg-sand-2",
                                 ]}
                                 onClick={() => setSelectedAddress(result)}
                               >
@@ -531,17 +553,21 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "complete"}>
-          <div class="px-1">
-            <PhCheckCircle class="mt-14 text-4xl text-green-11" />
-            <h1 class="mt-7 mb-2 text-3xl font-bold">
+          <Header title="" isInitialPage />
+          <div class="mt-16 px-1">
+            <RouteDots current={4} total={4} spacing="wide" />
+            <h1 class="mt-7 text-3xl font-bold text-balance break-keep">
               {joinState()?.name} 님,
               <br />
               가입을 마쳤어요
             </h1>
           </div>
-          <div class="mt-12 flex flex-col">
-            <span class="px-1 font-bold text-sand-11">이렇게 타요</span>
-            <div class="mt-4 flex flex-col gap-y-5">
+          <section class="mt-14 flex flex-col">
+            <div class="flex items-center gap-x-3 px-1">
+              <h2 class="shrink-0 text-sm font-bold text-sand-11">이렇게 타요</h2>
+              <span aria-hidden="true" class="h-px flex-1 bg-sand-4" />
+            </div>
+            <ol class="mt-5 flex flex-col gap-y-5">
               <For
                 each={[
                   ["탈 날을 미리 신청해요", "신청한 학생들의 집 방향으로 그날 노선이 생겨요."],
@@ -550,20 +576,26 @@ export default function Welcome() {
                 ]}
               >
                 {([title, description], index) => (
-                  <div class="flex gap-x-3.5">
-                    <div class="flex aspect-square h-max w-7 shrink-0 items-center justify-center rounded-full bg-sand-3 text-sm font-semibold">
+                  <li class="relative flex gap-x-3.5">
+                    <Show when={index() < 2}>
+                      <span
+                        aria-hidden="true"
+                        class="absolute top-8 -bottom-4 left-3.25 w-0.5 rounded-full bg-sand-6"
+                      />
+                    </Show>
+                    <div class="flex aspect-square h-max w-7 shrink-0 items-center justify-center rounded-full bg-sand-3 text-sm font-semibold tabular-nums">
                       {index() + 1}
                     </div>
                     <div class="flex flex-col">
                       <span class="font-semibold">{title}</span>
-                      <span class="text-sm text-sand-11">{description}</span>
+                      <span class="text-sm break-keep text-sand-11">{description}</span>
                     </div>
-                  </div>
+                  </li>
                 )}
               </For>
-            </div>
-          </div>
-          <Footer type="button" buttonLabel="가입 완료" onClick={() => nav("/", { replace: true })} />
+            </ol>
+          </section>
+          <Footer type="button" buttonLabel="시작하기" onClick={() => nav("/", { replace: true })} />
         </Show>
       </div>
     </Loading>

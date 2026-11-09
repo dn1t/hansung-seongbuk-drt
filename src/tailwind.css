@@ -7,15 +7,36 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
     color-scheme: light dark;
+    scrollbar-color: var(--color-sand-7) transparent;
     @apply tracking-tight;
   }
 
   body {
-    @apply bg-sand-1 select-none;
+    @apply bg-sand-1 text-sand-12 select-none;
+  }
+
+  ::selection {
+    @apply bg-amber-5 text-sand-12;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-amber-8;
+  }
+
+  input::placeholder {
+    @apply text-sand-10;
+  }
+
+  input:-webkit-autofill {
+    -webkit-text-fill-color: var(--color-sand-12);
+    -webkit-box-shadow: 0 0 0 1000px var(--color-sand-2) inset;
+    caret-color: var(--color-amber-9);
   }
 }
 
 @theme {
   --font-sans: P, "Pretendard Variable", Pretendard, system-ui, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+  --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
 }

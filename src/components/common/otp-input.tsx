@@ -27,7 +27,7 @@ export function OTPInput(props: OTPInputProps) {
         {(i) => (
           <div
             class={cn(
-              "flex h-15 flex-1 items-center justify-center rounded-xl border border-sand-4 bg-sand-2 text-2xl font-semibold text-sand-12 transition-colors",
+              "flex h-15 flex-1 items-center justify-center rounded-xl border border-sand-5 bg-sand-2 text-2xl font-semibold text-sand-12 tabular-nums transition-colors",
               focused() && i === Math.min(value().length, length() - 1) && "border-amber-8 ring-2 ring-amber-5",
               props.disabled && "opacity-50",
             )}

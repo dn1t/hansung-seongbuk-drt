@@ -27,7 +27,7 @@ export function Input(props: InputProps) {
         <input
           {...rest}
           class={cn(
-            "w-full rounded-xl border border-sand-4 bg-sand-2 px-4 py-2.75 text-lg caret-amber-9 focus:border-amber-8 focus:ring-2 focus:ring-amber-5 focus:outline-none",
+            "w-full rounded-xl border border-sand-5 bg-sand-2 px-4 py-2.75 text-lg caret-amber-9 focus:border-amber-8 focus:ring-2 focus:ring-amber-5 focus:outline-none",
             props.icon && "pl-11",
             props.class,
           )}

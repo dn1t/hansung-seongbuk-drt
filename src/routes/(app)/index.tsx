@@ -1,6 +1,7 @@
 import { Title } from "@solidjs/meta";
 import { revalidate, useNavigate } from "@solidjs/router";
 import { createMemo, Show } from "solid-js";
+import { env } from "virtual:solid-env/client";
 
 import { authClient } from "../../lib/auth-client";
 import { getCurrentSession } from "../../lib/session";
@@ -16,25 +17,20 @@ export default function Home() {
   }
 
   return (
-    <main>
-      <Title>Home - Solid App</Title>
-      <h1 class="text-4xl font-bold">Hello Solid!</h1>
-      <p>
-        Edit <code>src/routes/index.tsx</code> and save to reload.
-      </p>
+    <div class="flex flex-1 flex-col px-5 pb-24">
+      <Title>{`오늘 귀가 - ${env.VITE_APP_NAME}`}</Title>
+      <h1 class="mt-8 px-1 text-xl font-bold">오늘 귀가</h1>
+      <p class="mt-2 px-1 font-medium text-sand-11">준비 중인 화면이에요.</p>
       <Show when={session()}>
         {(current) => (
-          <p>
-            Signed in as {current().user.name}.{" "}
-            <button type="button" onClick={signOut}>
-              Sign out
+          <p class="mt-6 px-1 text-sm font-medium text-sand-11">
+            {current().user.name} 님으로 로그인했어요.{" "}
+            <button type="button" class="ml-0.5 cursor-pointer font-semibold text-amber-11" onClick={signOut}>
+              로그아웃
             </button>
           </p>
         )}
       </Show>
-      <a href="https://v2.solidjs.com/" target="_blank" rel="noopener noreferrer">
-        Learn Solid
-      </a>
-    </main>
+    </div>
   );
 }

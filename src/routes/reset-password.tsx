@@ -33,14 +33,15 @@ export default function ResetPassword() {
 
   return (
     <div class="flex flex-1 flex-col px-5">
-      <Header title="새 비밀번호를 정해 주세요" onBackClick={() => toWelcome("login")} />
+      <Header
+        title="새 비밀번호를 정해 주세요"
+        description={linkValid() ? undefined : "링크가 만료됐거나 이미 썼어요. 비밀번호 재설정을 다시 요청해 주세요."}
+        onBackClick={() => toWelcome("login")}
+      />
       <Show
         when={linkValid()}
         fallback={
           <div class="flex flex-1 flex-col">
-            <span class="my-4 px-1 font-medium text-balance break-keep text-sand-11">
-              링크가 만료됐거나 이미 썼어요. 비밀번호 재설정을 다시 요청해 주세요.
-            </span>
             <Footer type="button" buttonLabel="다시 요청하기" onClick={() => toWelcome("reset-password")} />
           </div>
         }
