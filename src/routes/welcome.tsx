@@ -40,13 +40,19 @@ function Footer(props: {
 }
 
 export default function Welcome() {
-  const [page, setPage] = createSignal<"welcome" | "login" | "join-1" | "join-2">("join-2");
+  const [page, setPage] = createSignal<"welcome" | "login" | "join-1" | "join-2" | "join-3" | "join-4">("join-3");
   const [loading, setLoading] = createSignal(false);
 
   const [email, setEmail] = createSignal("");
+  const [code, setCode] = createSignal("");
 
   async function sendVerificationCode() {
     /// TODO: Send verification code to the email
+    return await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
+  async function verifyCode() {
+    /// TODO: Verify the code entered by the user
     return await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
@@ -139,8 +145,8 @@ export default function Welcome() {
           onSubmit={(e) => {
             e.preventDefault();
             setLoading(true);
-            sendVerificationCode().then(() => {
-              setPage("join-2");
+            verifyCode().then(() => {
+              setPage("join-3");
               setLoading(false);
             });
           }}
@@ -156,6 +162,36 @@ export default function Welcome() {
             </span>
           </div>
           <Footer type="submit" buttonLabel="확인" variant={loading() ? "loading" : "primary"} />
+        </form>
+      </Show>
+      <Show when={page() === "join-3"}>
+        <Header title="이름과 비밀번호를 정해 주세요" onBackClick={() => setPage("join-2")} />
+        <form
+          class="flex flex-1 flex-col"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setPage("join-4");
+          }}
+        >
+          <div class="mt-4 flex flex-col gap-y-3.5">
+            <div class="mb-4 flex items-center gap-x-1.5 px-1 text-lg text-green-11">
+              <PhCheckCircle />
+              <span class="leading-none font-semibold text-green-11">고려대학교 학생으로 확인됐어요</span>
+            </div>
+            <Input type="name" name="name" label="이름" placeholder="이하민" />
+            <Input name="password" label="비밀번호" placeholder="••••••••" labelClass="mt-1.5" />
+            <div class="flex items-center gap-x-3 px-1">
+              <div class="flex items-center gap-x-1.5 text-green-11">
+                <PhCheck class="text-sm" />
+                <span>8자 이상</span>
+              </div>
+              <div class="flex items-center gap-x-1.5 text-red-11">
+                <PhX class="text-sm" />
+                <span>숫자 포함</span>
+              </div>
+            </div>
+          </div>
+          <Footer type="submit" buttonLabel="다음" variant={loading() ? "loading" : "primary"} />
         </form>
       </Show>
     </div>

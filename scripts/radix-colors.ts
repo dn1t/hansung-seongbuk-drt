@@ -7,7 +7,7 @@ type Palette = {
   [K in keyof typeof radix & string]: `${K}Dark` extends keyof typeof radix ? K : never;
 }[keyof typeof radix & string];
 
-const PALETTES: Palette[] = ["sand", "amber"];
+const PALETTES: Palette[] = ["sand", "amber", "green", "red"];
 const INCLUDE_ALPHA = false;
 const OUT = new URL("../src/radix-colors.css", import.meta.url);
 
