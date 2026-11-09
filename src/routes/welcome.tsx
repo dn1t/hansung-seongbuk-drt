@@ -15,7 +15,7 @@ import {
 import { Input } from "../components/common/input";
 import { OTPInput } from "../components/common/otp-input";
 import { Select } from "../components/common/select";
-import { Footer, Header, PasswordRules, RouteDots } from "../components/layout/screen";
+import { Footer, Header, PasswordRules, RouteDots, SectionRule } from "../components/layout/screen";
 import { NAME_MAX_LENGTH, setupAccount } from "../lib/account";
 import { ADDRESS_DETAIL_MAX_LENGTH, type AddressResult, saveHomeAddress, searchAddress } from "../lib/address";
 import { authClient } from "../lib/auth-client";
@@ -563,10 +563,7 @@ export default function Welcome() {
             </h1>
           </div>
           <section class="mt-14 flex flex-col">
-            <div class="flex items-center gap-x-3 px-1">
-              <h2 class="shrink-0 text-sm font-bold text-sand-11">이렇게 타요</h2>
-              <span aria-hidden="true" class="h-px flex-1 bg-sand-4" />
-            </div>
+            <SectionRule title="이렇게 타요" />
             <ol class="mt-5 flex flex-col gap-y-5">
               <For
                 each={[

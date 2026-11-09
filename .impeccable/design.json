@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-10T00:00:00+09:00",
+  "generatedAt": "2026-11-10T03:13:33+09:00",
   "title": "Design System: DRT",
   "extensions": {
     "colorMeta": {
@@ -98,12 +98,17 @@
           "#feebec",
           "#fffcfc"
         ]
+      },
+      "asphalt-edge": {
+        "role": "neutral",
+        "displayName": "Edge",
+        "canonical": "var(--color-sand-5)"
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Welcome headline only."
+        "purpose": "Welcome headline only; 40px, held to three lines."
       },
       "headline": {
         "displayName": "Headline",
@@ -111,11 +116,11 @@
       },
       "numeral": {
         "displayName": "Numeral",
-        "purpose": "Countdown and departure times; tabular figures."
+        "purpose": "Ticket-card countdown and stops-left figure in amber-11; tabular figures."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Tab screen titles, compact headers, sheet titles, section headers."
+        "purpose": "Tab screen titles, ticket-card state lines, bus option departure times."
       },
       "body-lg": {
         "displayName": "Body Large",
@@ -162,6 +167,16 @@
         "name": "caret-pulse",
         "value": "animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "purpose": "Amber caret bar in the active OTP cell."
+      },
+      {
+        "name": "button-state",
+        "value": "transition: background-color, color, scale 200ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Primary button hover/press and the disabled-to-ready fade; the arrow nudges 2px on hover, 4px on press. Off under reduced motion."
+      },
+      {
+        "name": "countdown-tick",
+        "value": "re-render every 15s, tabular numerals",
+        "purpose": "Ticket-card countdown updates without layout shift."
       }
     ],
     "breakpoints": [
@@ -177,25 +192,17 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The one amber action per screen, full width at the bottom.",
-      "html": "<button class=\"ds-btn-primary\">학교 이메일로 가입하기</button>",
-      "css": ".ds-btn-primary { width: 100%; background: var(--color-amber-9, #ffc53d); color: #21201c; border: none; border-radius: 12px; padding: 14px 28px; font-size: 16px; line-height: 24px; font-weight: 700; letter-spacing: -0.025em; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: var(--color-amber-10, #ffd60a); } .ds-btn-primary:active { background: var(--color-amber-8, #8f6424); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-amber-8, #8f6424); outline-offset: 2px; }"
+      "description": "The one amber action per screen: label left, arrow right, in the sticky footer. Loading keeps amber-9 and swaps the arrow for a spinner.",
+      "html": "<button class=\"ds-btn-primary\"><span>탈 버스 고르기</span><svg width=\"18\" height=\"18\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"m224.49 136.49l-72 72a12 12 0 0 1-17-17L187 140H40a12 12 0 0 1 0-24h147l-51.49-51.52a12 12 0 0 1 17-17l72 72a12 12 0 0 1-.02 17.01\"/></svg></button>",
+      "css": ".ds-btn-primary { width: 100%; height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px 0 20px; background: var(--color-amber-9, #ffc53d); color: #21201c; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; letter-spacing: -0.025em; cursor: pointer; transition: background-color 200ms cubic-bezier(0.16,1,0.3,1), color 200ms cubic-bezier(0.16,1,0.3,1), scale 200ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary svg { flex-shrink: 0; transition: translate 200ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background: var(--color-amber-10, #ffd60a); } .ds-btn-primary:hover svg { translate: 2px 0; } .ds-btn-primary:active { background: var(--color-amber-10, #ffd60a); scale: 0.98; } .ds-btn-primary:active svg { translate: 4px 0; } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-amber-8, #8f6424); outline-offset: 2px; }"
     },
     {
       "name": "Disabled Button",
       "kind": "button",
       "refersTo": "button-disabled",
-      "description": "Primary slot while the form is not yet valid.",
-      "html": "<button class=\"ds-btn-disabled\" disabled>확인</button>",
-      "css": ".ds-btn-disabled { width: 100%; background: var(--color-sand-4, #2a2a28); color: var(--color-sand-9, #6f6d66); border: none; border-radius: 12px; padding: 14px 28px; font-size: 16px; line-height: 24px; font-weight: 700; letter-spacing: -0.025em; cursor: not-allowed; }"
-    },
-    {
-      "name": "Loading Button",
-      "kind": "button",
-      "refersTo": "button-primary-loading",
-      "description": "Primary button while a request is in flight.",
-      "html": "<button class=\"ds-btn-loading\" disabled><svg class=\"ds-spin\" width=\"18\" height=\"18\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M232 128a104 104 0 0 1-208 0c0-41 23.81-78.36 60.66-95.27a8 8 0 0 1 6.68 14.54C60.15 61.59 40 93.27 40 128a88 88 0 0 0 176 0c0-34.73-20.15-66.41-51.34-80.73a8 8 0 0 1 6.68-14.54C208.19 49.64 232 87 232 128\"/></svg>로그인</button>",
-      "css": ".ds-btn-loading { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--color-amber-8, #8f6424); color: #21201c; border: none; border-radius: 12px; padding: 14px 28px; font-size: 16px; line-height: 24px; font-weight: 700; letter-spacing: -0.025em; cursor: progress; } .ds-spin { animation: ds-spin 1s linear infinite; } @keyframes ds-spin { to { transform: rotate(360deg); } }"
+      "description": "Primary slot until the form is valid: readable sand-11 label, unlit sand-8 arrow.",
+      "html": "<button class=\"ds-btn-disabled\" disabled><span>인증 코드 받기</span><svg width=\"18\" height=\"18\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"m224.49 136.49l-72 72a12 12 0 0 1-17-17L187 140H40a12 12 0 0 1 0-24h147l-51.49-51.52a12 12 0 0 1 17-17l72 72a12 12 0 0 1-.02 17.01\"/></svg></button>",
+      "css": ".ds-btn-disabled { width: 100%; height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px 0 20px; background: var(--color-sand-4, #2a2a28); color: var(--color-sand-11, #b5b3ad); border: none; border-radius: 12px; font-size: 16px; font-weight: 700; letter-spacing: -0.025em; cursor: not-allowed; } .ds-btn-disabled svg { color: var(--color-sand-8, #62605b); flex-shrink: 0; }"
     },
     {
       "name": "Text Field",
@@ -203,7 +210,7 @@
       "refersTo": "input",
       "description": "Labeled field: sand-2 fill, sand-4 border, amber focus border plus ring.",
       "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">학교 이메일</span><input class=\"ds-input\" placeholder=\"hamin@hansung.ac.kr\" /></label>",
-      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; } .ds-field-label { margin-left: 4px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--color-sand-11, #b5b3ad); letter-spacing: -0.025em; } .ds-input { width: 100%; box-sizing: border-box; background: var(--color-sand-2, #191918); color: var(--color-sand-12, #eeeeec); border: 1px solid var(--color-sand-4, #2a2a28); border-radius: 12px; padding: 11px 16px; font-size: 18px; line-height: 28px; letter-spacing: -0.025em; caret-color: var(--color-amber-9, #ffc53d); outline: none; transition: border-color 150ms, box-shadow 150ms; } .ds-input:focus, .ds-input:focus-visible { border-color: var(--color-amber-8, #8f6424); box-shadow: 0 0 0 2px var(--color-amber-5, #4d3000); }"
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; } .ds-field-label { margin-left: 4px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--color-sand-11, #b5b3ad); letter-spacing: -0.025em; } .ds-input { width: 100%; box-sizing: border-box; background: var(--color-sand-2, #191918); color: var(--color-sand-12, #eeeeec); border: 1px solid var(--color-sand-5, #31312e); border-radius: 12px; padding: 11px 16px; font-size: 18px; line-height: 28px; letter-spacing: -0.025em; caret-color: var(--color-amber-9, #ffc53d); outline: none; transition: border-color 150ms, box-shadow 150ms; } .ds-input:focus, .ds-input:focus-visible { border-color: var(--color-amber-8, #8f6424); box-shadow: 0 0 0 2px var(--color-amber-5, #4d3000); }"
     },
     {
       "name": "Option Card",
@@ -211,31 +218,47 @@
       "refersTo": "option-card",
       "description": "The single selectable-list pattern; selected gets amber border, wash, and ring.",
       "html": "<div class=\"ds-options\"><button class=\"ds-option is-selected\"><span class=\"ds-option-title\">서울 성북구 정릉로 10길</span><span class=\"ds-option-sub\">지번 정릉동 000-0</span></button><button class=\"ds-option\"><span class=\"ds-option-title\">서울 성북구 정릉로 104</span><span class=\"ds-option-sub\">지번 정릉동 000-00</span></button></div>",
-      "css": ".ds-options { display: flex; flex-direction: column; gap: 8px; } .ds-option { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: start; background: var(--color-sand-2, #191918); border: 1px solid var(--color-sand-4, #2a2a28); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: border-color 150ms, background-color 150ms; } .ds-option:hover { border-color: var(--color-sand-6, #3b3a37); } .ds-option:focus-visible { outline: none; border-color: var(--color-amber-8, #8f6424); box-shadow: 0 0 0 2px var(--color-amber-5, #4d3000); } .ds-option.is-selected { border-color: var(--color-amber-8, #8f6424); background: var(--color-amber-2, #1d180f); box-shadow: 0 0 0 2px var(--color-amber-5, #4d3000); } .ds-option-title { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--color-sand-12, #eeeeec); letter-spacing: -0.025em; } .ds-option-sub { font-size: 14px; line-height: 20px; color: var(--color-sand-11, #b5b3ad); letter-spacing: -0.025em; }"
+      "css": ".ds-options { display: flex; flex-direction: column; gap: 8px; } .ds-option { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: start; background: var(--color-sand-2, #191918); border: 1px solid var(--color-sand-5, #31312e); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: border-color 150ms, background-color 150ms; } .ds-option:hover { border-color: var(--color-sand-6, #3b3a37); } .ds-option:focus-visible { outline: none; border-color: var(--color-amber-8, #8f6424); box-shadow: 0 0 0 2px var(--color-amber-5, #4d3000); } .ds-option.is-selected { border-color: var(--color-amber-8, #8f6424); background: var(--color-amber-2, #1d180f); box-shadow: 0 0 0 2px var(--color-amber-5, #4d3000); } .ds-option-title { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--color-sand-12, #eeeeec); letter-spacing: -0.025em; } .ds-option-sub { font-size: 14px; line-height: 20px; color: var(--color-sand-11, #b5b3ad); letter-spacing: -0.025em; }"
     },
     {
-      "name": "OTP Code Input",
-      "kind": "input",
-      "refersTo": "otp-cell",
-      "description": "Six cells; the next cell to fill carries the amber focus treatment and caret.",
-      "html": "<div class=\"ds-otp\"><span class=\"ds-otp-cell\">4</span><span class=\"ds-otp-cell\">8</span><span class=\"ds-otp-cell\">2</span><span class=\"ds-otp-cell\">1</span><span class=\"ds-otp-cell is-active\"><i class=\"ds-otp-caret\"></i></span><span class=\"ds-otp-cell\"></span></div>",
-      "css": ".ds-otp { display: flex; gap: 12px; } .ds-otp-cell { flex: 1; height: 60px; display: flex; align-items: center; justify-content: center; background: var(--color-sand-2, #191918); border: 1px solid var(--color-sand-4, #2a2a28); border-radius: 12px; font-size: 24px; font-weight: 600; color: var(--color-sand-12, #eeeeec); font-variant-numeric: tabular-nums; transition: border-color 150ms, box-shadow 150ms; } .ds-otp-cell.is-active { border-color: var(--color-amber-8, #8f6424); box-shadow: 0 0 0 2px var(--color-amber-5, #4d3000); } .ds-otp-caret { display: block; width: 2px; height: 24px; background: var(--color-amber-9, #ffc53d); animation: ds-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; } @keyframes ds-pulse { 50% { opacity: 0.5; } }"
-    },
-    {
-      "name": "Route Chip",
+      "name": "Chips",
       "kind": "chip",
       "refersTo": "route-chip",
-      "description": "Route number as the bus's identity; amber fill, fixed ink.",
-      "html": "<span class=\"ds-route-chip\">성북 2번</span> <span class=\"ds-status-chip ds-status-go\">운행 중</span> <span class=\"ds-status-chip ds-status-stop\">6명 넘침</span>",
-      "css": ".ds-route-chip { display: inline-block; background: var(--color-amber-9, #ffc53d); color: #21201c; border-radius: 4px; padding: 2px 6px; font-size: 14px; line-height: 20px; font-weight: 700; letter-spacing: -0.025em; } .ds-status-chip { display: inline-block; border-radius: 4px; padding: 2px 6px; font-size: 12px; line-height: 16px; font-weight: 600; } .ds-status-go { background: var(--color-green-3, #132d21); color: var(--color-green-11, #3dd68c); } .ds-status-stop { background: var(--color-red-3, #3b1219); color: var(--color-red-11, #ff9592); }"
+      "description": "Loud route chip on the home ticket only; quiet amber-3 chip in bus lists; neutral 예시 데이터 sample badge on every sample-data surface.",
+      "html": "<div class=\"ds-chips\"><span class=\"ds-chip-route\">성북 2번</span><span class=\"ds-chip-route-quiet\">성북 2번</span><span class=\"ds-chip-sample\">예시 데이터</span></div>",
+      "css": ".ds-chips { display: flex; gap: 8px; align-items: center; } .ds-chip-route, .ds-chip-route-quiet { display: inline-flex; align-items: center; height: 24px; padding: 0 6px; border-radius: 4px; font-size: 14px; font-weight: 700; letter-spacing: -0.025em; } .ds-chip-route { background: var(--color-amber-9, #ffc53d); color: #21201c; } .ds-chip-route-quiet { background: var(--color-amber-3, #302008); color: var(--color-amber-11, #ffca16); } .ds-chip-sample { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; background: var(--color-sand-3, #222221); color: var(--color-sand-11, #b5b3ad); font-size: 12px; font-weight: 600; }"
+    },
+    {
+      "name": "Wordmark Plate",
+      "kind": "custom",
+      "refersTo": "wordmark-plate",
+      "description": "The app name as an inverted destination-sign plate; never amber.",
+      "html": "<span class=\"ds-wordmark\">DRT</span>",
+      "css": ".ds-wordmark { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--color-sand-12, #eeeeec); color: var(--color-sand-1, #111110); font-size: 13px; line-height: 20px; font-weight: 700; letter-spacing: 0.06em; }"
+    },
+    {
+      "name": "Ticket Card",
+      "kind": "card",
+      "refersTo": "ticket-card",
+      "description": "The home tab's one ticket: loud route chip, amber-11 countdown, boarding stop, then the four-value time row on hairlines.",
+      "html": "<section class=\"ds-ticket\"><div class=\"ds-ticket-top\"><div class=\"ds-ticket-head\"><span class=\"ds-ticket-chip\">성북 2번</span><span class=\"ds-ticket-at\">01:15 승차</span></div><p class=\"ds-ticket-count\">17분 후</p><p class=\"ds-ticket-stop\">성신여대입구역 2번 출구에 와요</p></div><dl class=\"ds-legs\"><div><dt>정류장까지</dt><dd>6분</dd></div><div><dt>기다림</dt><dd>17분</dd></div><div><dt>타고 가요</dt><dd>30분</dd></div><div><dt>집까지</dt><dd>6분</dd></div></dl></section>",
+      "css": ".ds-ticket { max-width: 360px; background: var(--color-sand-2, #191918); color: var(--color-sand-12, #eeeeec); border-radius: 16px; overflow: hidden; letter-spacing: -0.025em; } .ds-ticket-top { padding: 20px 20px 0; } .ds-ticket-head { display: flex; align-items: center; gap: 8px; } .ds-ticket-chip { display: inline-flex; align-items: center; height: 24px; padding: 0 6px; border-radius: 4px; background: var(--color-amber-9, #ffc53d); color: #21201c; font-size: 14px; font-weight: 700; } .ds-ticket-at { font-size: 14px; font-weight: 600; color: var(--color-sand-11, #b5b3ad); font-variant-numeric: tabular-nums; } .ds-ticket-count { margin: 16px 0 0; font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -0.03em; color: var(--color-amber-11, #ffca16); font-variant-numeric: tabular-nums; } .ds-ticket-stop { margin: 4px 0 0; font-weight: 500; color: var(--color-sand-11, #b5b3ad); } .ds-legs { display: grid; grid-template-columns: repeat(4, 1fr); margin: 20px 0 0; border-top: 1px solid var(--color-sand-4, #2a2a28); border-bottom: 1px solid var(--color-sand-4, #2a2a28); } .ds-legs div { padding: 12px 0 12px 12px; } .ds-legs div:first-child { padding-left: 20px; } .ds-legs div + div { border-left: 1px solid var(--color-sand-4, #2a2a28); } .ds-legs dt { font-size: 12px; font-weight: 500; color: var(--color-sand-11, #b5b3ad); } .ds-legs dd { margin: 2px 0 0; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Time Cells",
+      "kind": "custom",
+      "refersTo": "time-cell",
+      "description": "30-minute slots; range edges amber-3 with amber-8 border and ring, so the button stays the only amber-9.",
+      "html": "<div class=\"ds-cells\"><button class=\"ds-cell\"><b>01:30</b><span>~02:00</span></button><button class=\"ds-cell is-edge\"><b>02:00</b><span>~02:30</span></button><button class=\"ds-cell is-inside\"><b>02:30</b><span>~03:00</span></button><button class=\"ds-cell is-edge\"><b>03:00</b><span>~03:30</span></button></div>",
+      "css": ".ds-cells { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-width: 320px; } .ds-cell { height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid var(--color-sand-3, #222221); background: var(--color-sand-3, #222221); color: var(--color-sand-12, #eeeeec); font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color 150ms, border-color 150ms; } .ds-cell b { font-size: 18px; line-height: 24px; font-weight: 700; } .ds-cell span { font-size: 12px; font-weight: 500; color: var(--color-sand-11, #b5b3ad); } .ds-cell.is-edge { background: var(--color-amber-3, #302008); border-color: var(--color-amber-8, #8f6424); box-shadow: 0 0 0 2px var(--color-amber-5, #4d3000); color: var(--color-amber-11, #ffca16); } .ds-cell.is-inside { background: var(--color-amber-3, #302008); border-color: var(--color-amber-3, #302008); color: var(--color-amber-11, #ffca16); } .ds-cell.is-edge span, .ds-cell.is-inside span { color: var(--color-amber-11, #ffca16); } .ds-cell:focus-visible { outline: 2px solid var(--color-amber-8, #8f6424); outline-offset: 2px; }"
     },
     {
       "name": "Tab Bar",
       "kind": "nav",
       "refersTo": "tab-bar",
-      "description": "Fixed bottom nav, four equal items, translucent sand-1.",
+      "description": "Fixed bottom nav, four equal items, opaque sand-1; the active tab uses the fill icon at 700.",
       "html": "<nav class=\"ds-tabbar\"><a class=\"ds-tab is-active\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M233.54 142.23a8 8 0 0 0-8-2a88.08 88.08 0 0 1-109.8-109.8a8 8 0 0 0-10-10a104.84 104.84 0 0 0-52.91 37A104 104 0 0 0 136 224a103.1 103.1 0 0 0 62.52-20.88a104.84 104.84 0 0 0 37-52.91a8 8 0 0 0-1.98-7.98m-44.64 48.11A88 88 0 0 1 65.66 67.11a89 89 0 0 1 31.4-26A106 106 0 0 0 96 56a104.11 104.11 0 0 0 104 104a106 106 0 0 0 14.92-1.06a89 89 0 0 1-26.02 31.4\"/></svg><span>오늘 귀가</span></a><a class=\"ds-tab\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M208 32h-24v-8a8 8 0 0 0-16 0v8H88v-8a8 8 0 0 0-16 0v8H48a16 16 0 0 0-16 16v160a16 16 0 0 0 16 16h160a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16M72 48v8a8 8 0 0 0 16 0v-8h80v8a8 8 0 0 0 16 0v-8h24v32H48V48Zm136 160H48V96h160z\"/></svg><span>사전 신청</span></a><a class=\"ds-tab\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M104 40H56a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h48a16 16 0 0 0 16-16V56a16 16 0 0 0-16-16m0 64H56V56h48Zm0 32H56a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h48a16 16 0 0 0 16-16v-48a16 16 0 0 0-16-16m0 64H56v-48h48Zm96-160h-48a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h48a16 16 0 0 0 16-16V56a16 16 0 0 0-16-16m0 64h-48V56h48Z\"/></svg><span>내 QR</span></a><a class=\"ds-tab\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M230.92 212c-15.23-26.33-38.7-45.21-66.09-54.16a72 72 0 1 0-73.66 0c-27.39 8.94-50.86 27.82-66.09 54.16a8 8 0 1 0 13.85 8c18.84-32.56 52.14-52 89.07-52s70.23 19.44 89.07 52a8 8 0 1 0 13.85-8M72 96a56 56 0 1 1 56 56a56.06 56.06 0 0 1-56-56\"/></svg><span>내 정보</span></a></nav>",
-      "css": ".ds-tabbar { display: flex; align-items: center; height: 64px; background: color-mix(in srgb, var(--color-sand-1, #111110) 80%, transparent); border-top: 1px solid var(--color-sand-3, #222221); } .ds-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 2px; color: var(--color-sand-10, #7c7b74); text-decoration: none; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: -0.025em; } .ds-tab.is-active { color: var(--color-sand-12, #eeeeec); } .ds-tab:hover { color: var(--color-sand-11, #b5b3ad); } .ds-tab:focus-visible { outline: 2px solid var(--color-amber-8, #8f6424); outline-offset: -2px; border-radius: 12px; }"
+      "css": ".ds-tabbar { display: flex; align-items: center; height: 64px; background: var(--color-sand-1, #111110); border-top: 1px solid var(--color-sand-3, #222221); } .ds-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 2px; color: var(--color-sand-10, #7c7b74); text-decoration: none; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: -0.025em; } .ds-tab.is-active { color: var(--color-sand-12, #eeeeec); } .ds-tab:hover { color: var(--color-sand-11, #b5b3ad); } .ds-tab:focus-visible { outline: 2px solid var(--color-amber-8, #8f6424); outline-offset: -2px; border-radius: 12px; }"
     },
     {
       "name": "Step List",
@@ -248,23 +271,29 @@
   ],
   "narrative": {
     "northStar": "막차 뒤의 불빛 (The Light After the Last Bus)",
-    "overview": "DRT is used past midnight, on a phone, by a tired student standing outside. The screen is a dark, quiet field of warm gray asphalt, with exactly one light switched on: the amber of the thing to do next. That might be the primary button, the minutes until the bus leaves, or the route number on the bus. Everything else steps back into sand-gray text and hairlines so that one light can be found in a single glance.\n\nThe system is flat and tonal. Depth comes from small steps in surface lightness, never from shadows. Type is Pretendard throughout, set tight (-0.025em) and heavy where it carries a decision: big bold titles, bold button labels, and bold tabular numerals for times. Controls are large and generously rounded (12px) so they can be hit with one thumb. Copy wraps on Korean word boundaries (break-keep) and balances its lines.\n\nEvery color is defined as a light-dark() pair and the page declares color-scheme: light dark, so the app follows the OS setting. The student-facing mockups are drawn in dark mode and dark is the reference rendering, but both modes must work. The operator screens are drawn in light mode.",
+    "overview": "**Creative North Star: \"막차 뒤의 불빛 (The Light After the Last Bus)\"**\n\nDRT is used past midnight, on a phone, by a tired student standing outside. The screen is a dark, quiet field of warm gray asphalt, with exactly one light switched on: the amber of the thing to do next. That might be the primary button, the minutes until the bus leaves, or the route number on the bus. Everything else steps back into sand-gray text and hairlines so that one light can be found in a single glance.\n\nThe system is flat and tonal. Depth comes from small steps in surface lightness, never from shadows. Type is Pretendard throughout, set tight (-0.025em) and heavy where it carries a decision: big bold titles, bold button labels, and bold tabular numerals for times. Controls are large and generously rounded (12px) so they can be hit with one thumb. Copy wraps on Korean word boundaries (`break-keep`) and balances its lines.\n\nThe second idea is the **노선표 (timetable)**: the app borrows the structure of bus signage, never its pictures. The app name sits in a small inverted plate like a destination sign, sections open with a bold label and a hairline that runs to the edge, the main button reads left to right like a line on a timetable (label, then an arrow), and progress is always drawn as stops on a route that ends at a house. These are small, static parts. There are no drawn maps, no street grids, and no drawing animations. The one map in the app is the optional Kakao map of the walk to the boarding stop: a real tool, not decoration.\n\nEvery color is defined as a `light-dark()` pair and the page declares `color-scheme: light dark`, so the app follows the OS setting. The student-facing mockups are drawn in dark mode and dark is the reference rendering, but both modes must work. The operator screens are drawn in light mode.",
     "keyCharacteristics": [
       "One amber light per screen. Everything else is warm neutral.",
       "Flat surfaces stacked tonally: base → raised → control. No shadows.",
       "Large, one-handed controls: 52px+ touch targets, 12px corners, bold labels.",
       "Tight Pretendard type, bold wherever the eye needs to land, with tabular numerals for anything that changes over time.",
-      "A single centered mobile column (max 576px), with one full-width primary action pinned at the bottom."
+      "A single centered mobile column (max 576px), with one full-width primary action pinned at the bottom on a solid sand-1 backing.",
+      "Signage structure: an inverted wordmark plate, hairline section rules, a left-aligned button label with a trailing arrow, and progress drawn as route dots ending at a house."
     ],
     "rules": [
       {
         "name": "The One Light Rule",
-        "body": "Each screen gets one amber-9 surface: its primary action. Amber text (amber-11) can mark one or two more key figures or links. If two things on a screen are amber-9, one of them is wrong.",
+        "body": "Each screen gets one amber-9 surface: its primary action. When the home tab has no button pinned, the route chip on the ticket card is that light. Amber text (amber-11) can mark one or two more key figures or links. If two things on a screen are amber-9, one of them is wrong.",
         "section": "colors"
       },
       {
         "name": "The No-Yellow-Warning Rule",
         "body": "There is no yellow \"caution\" color, because it can't be told apart from the brand amber. Show \"arriving soon\" in amber-11 as emphasis, and show \"almost full\" with words and an icon, not a color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Quiet Selection Rule",
+        "body": "Selection and lists never borrow amber-9. Selected time cells and list route chips are amber-3 with amber-11 text, so the pinned button stays the only lit surface.",
         "section": "colors"
       },
       {
@@ -274,7 +303,7 @@
       },
       {
         "name": "The Tabular Time Rule",
-        "body": "Every number that changes or lines up in a column (countdowns, clock times, rider counts such as 14/28명, the OTP timer) uses tabular-nums, so the layout doesn't shift as digits change.",
+        "body": "Every number that changes or lines up in a column (countdowns, clock times, rider counts such as 14/28명, the OTP timer) uses `tabular-nums`, so the layout doesn't shift as digits change.",
         "section": "typography"
       },
       {
@@ -289,7 +318,7 @@
       },
       {
         "name": "The Bold First Rule",
-        "body": "When something needs to stand out, make it bolder before you make it bigger or color it. Bold (600–700) is the default for anything people scan for: titles, button labels, list item titles, times and counts, summary values, chips, inline actions, and small markers such as the step counter (14px, 700). Small text can be bold; the step counter is the reference. Keep 400–500 for descriptions, helper copy, and running sentences, so the bold still stands out.",
+        "body": "When something needs to stand out, make it bolder before you make it bigger or color it. Bold (600–700) is the default for anything people scan for: titles, button labels, list item titles, times and counts, summary values, chips, inline actions, and small markers (14px, 700). Small text can be bold. Keep 400–500 for descriptions, helper copy, and running sentences, so the bold still stands out.",
         "section": "typography"
       },
       {
@@ -305,14 +334,18 @@
     ],
     "dos": [
       "Do use amber-9 for exactly one primary action per screen, with #21201C text.",
-      "Do keep the primary button full width, pinned at the bottom, and visible while disabled (sand-4 / sand-9) rather than hiding it.",
+      "Do keep the primary button full width, in the sticky sand-1 footer at the bottom (above the tab bar on tab screens), and visible while disabled (sand-4 / sand-11, unlit arrow) rather than hiding it.",
       "Do show focus as an amber-8 border plus a 2px amber-5 ring on every field and selectable card.",
+      "Do rely on the global keyboard focus outline (2px amber-8, 2px offset) for buttons and links, and the amber-5 text selection; both live in `src/tailwind.css`.",
       "Do reach for weight (600–700) first when a word, number, or label needs emphasis, and keep descriptions at 400–500.",
-      "Do use tabular-nums for every time, countdown, and count.",
-      "Do use break-keep and text-balance on Korean headlines and helper copy.",
-      "Do define any new color as a Radix step from src/radix-colors.css (add palettes through scripts/radix-colors.ts), so it works in both modes.",
+      "Do use `tabular-nums` for every time, countdown, and count.",
+      "Do use `break-keep` and `text-balance` on Korean headlines and helper copy.",
+      "Do give every primary button the trailing arrow, and keep its label left-aligned.",
+      "Do open a group of content with a section rule, not a card or a kicker label.",
+      "Do respect the device safe area at the bottom of every screen (footer and tab bar).",
+      "Do define any new color as a Radix step from `src/radix-colors.css` (add palettes through `scripts/radix-colors.ts`), so it works in both modes.",
       "Do show time as four separate values: walk to the stop, wait for the bus, ride time, and walk home.",
-      "Do label sample operating data as 예시 데이터 on operator and demo screens."
+      "Do label sample operating data with the 예시 데이터 sample badge on every surface that shows it, student screens included."
     ],
     "donts": [
       "Don't add shadows, gradients, or glows. Depth is tonal.",
@@ -322,7 +355,8 @@
       "Don't make a nested element as round as or rounder than its container.",
       "Don't set input text below 16px.",
       "Don't render the QR code in dark mode colors.",
-      "Don't mix list styles: selectable lists are always bordered option cards, never rows with a checkmark."
+      "Don't mix list styles: selectable lists are always bordered option cards, never rows with a checkmark.",
+      "Don't use amber-9 for selected time cells or route chips in lists; selection and lists are amber-3 with amber-11 text."
     ]
   }
 }

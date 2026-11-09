@@ -13,5 +13,6 @@ export default {
   },
   client: {
     VITE_APP_NAME: v.optional(v.pipe(v.string(), v.minLength(1)), "DRT"),
+    VITE_KAKAO_JS_KEY: v.optional(v.string(), ""),
   },
 };

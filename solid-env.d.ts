@@ -9,6 +9,7 @@ declare module 'virtual:solid-env/client' {
     : string;
   const env: {
     readonly "VITE_APP_NAME": __Out<__Schema["client"]["VITE_APP_NAME"]>;
+    readonly "VITE_KAKAO_JS_KEY": __Out<__Schema["client"]["VITE_KAKAO_JS_KEY"]>;
   };
   export { env };
   export default env;
@@ -29,6 +30,7 @@ declare module 'virtual:solid-env/server' {
     readonly "MAILGUN_DOMAIN": __Out<__Schema["server"]["MAILGUN_DOMAIN"]>;
     readonly "KAKAO_REST_API_KEY": __Out<__Schema["server"]["KAKAO_REST_API_KEY"]>;
     readonly "VITE_APP_NAME": __Out<__Schema["client"]["VITE_APP_NAME"]>;
+    readonly "VITE_KAKAO_JS_KEY": __Out<__Schema["client"]["VITE_KAKAO_JS_KEY"]>;
   };
   export { env };
   export default env;

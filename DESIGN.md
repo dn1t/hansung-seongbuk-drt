@@ -48,7 +48,7 @@ typography:
     fontSize: "32px"
     fontWeight: 700
     lineHeight: "40px"
-    letterSpacing: "-0.025em"
+    letterSpacing: "-0.03em"
     fontFeature: "tnum"
   title:
     fontFamily: "P, Pretendard Variable, Pretendard, system-ui, Helvetica Neue, Apple SD Gothic Neo, sans-serif"
@@ -90,7 +90,9 @@ spacing:
   unit: "4px"
   field-gap: "14px"
   gutter: "24px"
+  footer-top: "16px"
   footer-bottom: "28px"
+  tab-title-top: "32px"
   section: "48px"
 components:
   button-primary:
@@ -139,6 +141,16 @@ components:
     padding: "12px 16px"
   option-card-selected:
     backgroundColor: "{colors.amber-wash}"
+  time-cell:
+    backgroundColor: "{colors.asphalt-control}"
+    textColor: "{colors.asphalt-text}"
+    rounded: "{rounded.xl}"
+    height: "60px"
+  time-cell-selected:
+    backgroundColor: "{colors.amber-chip-bg}"
+    textColor: "{colors.amber-text}"
+    rounded: "{rounded.xl}"
+    height: "60px"
   wordmark-plate:
     backgroundColor: "{colors.asphalt-text}"
     textColor: "{colors.asphalt-base}"
@@ -152,7 +164,22 @@ components:
     textColor: "{colors.ink-fixed}"
     typography: "{typography.label}"
     rounded: "{rounded.sm}"
-    padding: "2px 6px"
+    height: "24px"
+    padding: "0 6px"
+  route-chip-quiet:
+    backgroundColor: "{colors.amber-chip-bg}"
+    textColor: "{colors.amber-text}"
+    typography: "{typography.label}"
+    rounded: "{rounded.sm}"
+    height: "24px"
+    padding: "0 6px"
+  sample-badge:
+    backgroundColor: "{colors.asphalt-control}"
+    textColor: "{colors.asphalt-text-secondary}"
+    typography: "{typography.caption}"
+    rounded: "{rounded.sm}"
+    height: "20px"
+    padding: "0 6px"
   step-badge:
     backgroundColor: "{colors.asphalt-control}"
     textColor: "{colors.asphalt-text}"
@@ -163,6 +190,18 @@ components:
     backgroundColor: "{colors.asphalt-raised}"
     textColor: "{colors.asphalt-text}"
     rounded: "{rounded.2xl}"
+  ticket-card:
+    backgroundColor: "{colors.asphalt-raised}"
+    textColor: "{colors.asphalt-text}"
+    rounded: "{rounded.2xl}"
+    padding: "20px"
+  bus-option-card:
+    backgroundColor: "{colors.asphalt-raised}"
+    textColor: "{colors.asphalt-text}"
+    rounded: "{rounded.xl}"
+  footer:
+    backgroundColor: "{colors.asphalt-base}"
+    padding: "16px 0 28px"
   sheet:
     backgroundColor: "{colors.asphalt-raised}"
     textColor: "{colors.asphalt-text}"
@@ -187,7 +226,7 @@ DRT is used past midnight, on a phone, by a tired student standing outside. The 
 
 The system is flat and tonal. Depth comes from small steps in surface lightness, never from shadows. Type is Pretendard throughout, set tight (-0.025em) and heavy where it carries a decision: big bold titles, bold button labels, and bold tabular numerals for times. Controls are large and generously rounded (12px) so they can be hit with one thumb. Copy wraps on Korean word boundaries (`break-keep`) and balances its lines.
 
-The second idea is the **노선표 (timetable)**: the app borrows the structure of bus signage, never its pictures. The app name sits in a small inverted plate like a destination sign, sections open with a bold label and a hairline that runs to the edge, the main button reads left to right like a line on a timetable (label, then an arrow), and progress is always drawn as stops on a route that ends at a house. These are small, static parts. There are no maps, no street grids, and no drawing animations.
+The second idea is the **노선표 (timetable)**: the app borrows the structure of bus signage, never its pictures. The app name sits in a small inverted plate like a destination sign, sections open with a bold label and a hairline that runs to the edge, the main button reads left to right like a line on a timetable (label, then an arrow), and progress is always drawn as stops on a route that ends at a house. These are small, static parts. There are no drawn maps, no street grids, and no drawing animations. The one map in the app is the optional Kakao map of the walk to the boarding stop: a real tool, not decoration.
 
 Every color is defined as a `light-dark()` pair and the page declares `color-scheme: light dark`, so the app follows the OS setting. The student-facing mockups are drawn in dark mode and dark is the reference rendering, but both modes must work. The operator screens are drawn in light mode.
 
@@ -197,7 +236,7 @@ Every color is defined as a `light-dark()` pair and the page declares `color-sch
 - Flat surfaces stacked tonally: base → raised → control. No shadows.
 - Large, one-handed controls: 52px+ touch targets, 12px corners, bold labels.
 - Tight Pretendard type, bold wherever the eye needs to land, with tabular numerals for anything that changes over time.
-- A single centered mobile column (max 576px), with one full-width primary action pinned at the bottom.
+- A single centered mobile column (max 576px), with one full-width primary action pinned at the bottom on a solid sand-1 backing.
 - Signage structure: an inverted wordmark plate, hairline section rules, a left-aligned button label with a trailing arrow, and progress drawn as route dots ending at a house.
 
 ## Colors
@@ -206,24 +245,24 @@ A warm, desaturated Radix Sand neutral carries everything except the next action
 
 ### Primary
 
-- **막차 불빛 Last-Light Amber** (amber-9): the one light. Use it for the primary button background, the caret in focused fields, route-number chips, the rider's own segment of a route line, selected time cells, and the "on" state of toggles. It is the same value in both modes.
-- **Hover / Pressed** (amber-10): the state shift of the same light on buttons. **amber-8** is a border color only: the border of a focused field or a selected option. Never use it as a fill; in dark mode it is a muddy brown (#8f6424) that drops Fixed Ink to about 3:1.
-- **Amber Ring** (amber-5): the 2px focus halo around a focused field or selected option.
+- **막차 불빛 Last-Light Amber** (amber-9): the one light. Use it for the primary button background, the caret in focused fields, the route chip on the home ticket card, the rider's own segment of a route line, and the "on" state of toggles. It is the same value in both modes. Selected time cells are not amber-9 (see Amber Chip Background).
+- **Hover / Pressed** (amber-10): the state shift of the same light on buttons. **amber-8** is a border color only: the border of a focused field, a selected option, or the edge cells of a selected time range. Never use it as a fill; in dark mode it is a muddy brown (#8f6424) that drops Fixed Ink to about 3:1.
+- **Amber Ring** (amber-5): the 2px focus halo around a focused field, a selected option, or a selected time range's edge cells; also the 3px ring on the current stop or the live bus position.
 - **Amber Wash** (amber-2): the background fill of a selected option card.
-- **Amber Chip Background** (amber-3): the in-between cells of a selected time range, and quiet amber chips.
-- **Amber Text** (amber-11): amber used as text, for links and inline actions (로그인, 비밀번호를 잊었어요, 다시 보내기), the remaining-time figure, and drop-off counts on the driver screen.
+- **Amber Chip Background** (amber-3): the fill of every selected time cell (edges and in-between), and the quiet route chip in bus lists.
+- **Amber Text** (amber-11): amber used as text, for links and inline actions (로그인, 비밀번호를 잊었어요, 다시 보내기), the countdown on the ticket card, 승차 / 하차 tags on route timelines, the 가장 가까워요 marker on the default drop-off stop, text in selected time cells and quiet route chips, and drop-off counts on the driver screen.
 - **Fixed Ink** (#21201C): text on amber-9 in both modes. It is also the dark color of QR code modules.
 
 ### Neutral
 
-- **새벽 아스팔트 Small-Hours Asphalt Base** (sand-1): the page background.
-- **Raised** (sand-2): input fields, OTP cells, option cards, grouped list cards, bottom sheets, and modals.
-- **Control** (sand-3): the step-number badges, the "@" domain add-on, segmented-control tracks, unselected time cells, the tab bar's top border, and the hairlines that frame the content column on wide screens.
-- **Line** (sand-4): row dividers inside lists, section rules, and the background of disabled and secondary buttons.
-- **Edge** (sand-5): the resting border of inputs, selects, OTP cells, and option cards. One step above Line so fields still read as fields on the dark base.
+- **새벽 아스팔트 Small-Hours Asphalt Base** (sand-1): the page background, and the solid backing of the sticky footer.
+- **Raised** (sand-2): input fields, OTP cells, option cards, bus option cards, the ticket card, grouped list cards, bottom sheets, and modals.
+- **Control** (sand-3): the step-number badges, the "@" domain add-on, segmented-control tracks, unselected time cells, the sample badge, the pressed state of bus option cards, the map placeholder, the tab bar's top border, and the hairlines that frame the content column on wide screens.
+- **Line** (sand-4): row dividers inside lists and cards, the hairlines between ticket-card regions and time-row cells, the walk-row border, section rules, and the background of disabled and secondary buttons.
+- **Edge** (sand-5): the resting border of inputs, selects, OTP cells, option cards, and bus option cards. One step above Line so fields still read as fields on the dark base.
 - **Divider** (sand-6): section dividers between groups on a screen.
 - **Handle** (sand-7): the sheet grab handle and the "off" track of a toggle.
-- **Mark** (sand-8): row chevrons, dotted walking segments on route diagrams, and the past part of a route line.
+- **Mark** (sand-8): row chevrons, the starting-point dot and dotted walking segments on route diagrams, and the past part of a route line.
 - **Muted** (sand-9): text on disabled buttons and input icons. Not for readable text (see Do's and Don'ts).
 - **Faint Text** (sand-10): inactive tab labels and icons, passive placeholder states such as "검색 중…" and "검색 결과가 없어요", the inactive password-rule hint, and the middle-dot separator.
 - **Secondary Text** (sand-11): field labels, descriptions, helper lines, metadata such as walking time and stop counts, and the app name on the first screen.
@@ -236,9 +275,11 @@ A warm, desaturated Radix Sand neutral carries everything except the next action
 
 ### Named Rules
 
-**The One Light Rule.** Each screen gets one amber-9 surface: its primary action. Amber text (amber-11) can mark one or two more key figures or links. If two things on a screen are amber-9, one of them is wrong.
+**The One Light Rule.** Each screen gets one amber-9 surface: its primary action. When the home tab has no button pinned, the route chip on the ticket card is that light. Amber text (amber-11) can mark one or two more key figures or links. If two things on a screen are amber-9, one of them is wrong.
 
 **The No-Yellow-Warning Rule.** There is no yellow "caution" color, because it can't be told apart from the brand amber. Show "arriving soon" in amber-11 as emphasis, and show "almost full" with words and an icon, not a color.
+
+**The Quiet Selection Rule.** Selection and lists never borrow amber-9. Selected time cells and list route chips are amber-3 with amber-11 text, so the pinned button stays the only lit surface.
 
 **The Fixed Ink Rule.** Text on amber-9 is always #21201C, never white and never sand-12 (sand-12 turns light in dark mode). Text on green-9 or red-9 is always white.
 
@@ -251,13 +292,13 @@ A warm, desaturated Radix Sand neutral carries everything except the next action
 ### Hierarchy
 
 - **Display** (700, 40px, 48px line-height, -0.03em): used only for the welcome headline ("막차 때문에 먼저 일어나지 않아도 돼요"). It is held to 288px so it always breaks into three lines: 막차 때문에 / 먼저 일어나지 / 않아도 돼요.
-- **Headline** (700, 30px, 36px): titles on full-screen flow pages such as login, signup steps, password reset, and the signup-complete screen. It sits under the back caret. An optional one-line description (16px, 500, sand-11) sits 8px below it; this is the only place a screen explains itself.
-- **Numeral** (700, 32px, tabular): the countdown on tonight's bus ("17분 후") and departure times on bus option cards. From the mockups; not built yet.
-- **Title** (700, 20px, 28px): titles on tab screens (내 QR, 사전 신청, 내 정보), compact page headers that sit next to the back caret (버스 찾기, 집 주소), sheet titles, and section headers. From the plan and mockups; not built yet.
+- **Headline** (700, 30px, 36px): titles on full-screen flow pages such as login, signup steps, password reset, the signup-complete screen, and the day-of flow (어디서 출발해요?, the bus title 성북 2번 01:30 버스). It sits under the back caret. An optional one-line description (16px, 500, sand-11) sits 8px below it; this is the only place a screen explains itself.
+- **Numeral** (700, 32px, 40px, -0.03em, tabular): the largest thing on the home tab, in amber-11: the countdown on the waiting ticket card (17분 후, 곧 와요) and the stops-left figure while riding (3정거장 남았어요). It re-reads the clock every 15 seconds without shifting layout.
+- **Title** (700, 20px, 28px): titles on tab screens (오늘 귀가; 내 QR, 사전 신청, 내 정보 to come), the state line on a ticket card (오늘은 운행하지 않아요), and departure times on bus option cards. Compact headers beside the back caret (버스 찾기, 집 주소) and sheet titles are from the plan; not built yet.
 - **Body Large** (400, 18px, 28px): text inside inputs and select boxes, the welcome subline, and the email address echoed on the code screen (600).
 - **Body** (400, 16px, 24px): default text, list item titles (600), error and notice lines (500), and button labels (700).
 - **Label** (600, 14px, 20px): field labels in sand-11. The same size at 400–500 is used for helper text, row subtitles, password-rule hints, and the address-privacy note.
-- **Caption** (500, 12px, 16px): tab bar labels and the smallest chips. The active tab label is 700.
+- **Caption** (500, 12px, 16px): tab bar labels, time-row labels, the ~end line in time cells, and the sample badge (600). The active tab label is 700.
 - **Plate** (700, 13px, 20px, +0.06em): the wordmark inside its plate. The only positive tracking in the system, because it is set in Latin capitals.
 
 ### Named Rules
@@ -274,9 +315,10 @@ A warm, desaturated Radix Sand neutral carries everything except the next action
 
 - **Column:** one centered column, max 576px (`max-w-xl`), full height (`min-h-dvh`). On wider screens, 1px sand-3 hairlines are fixed to the column's left and right edges, so the app reads as a phone-shaped strip rather than a stretched page.
 - **Gutters:** the page uses 20px horizontal padding, and text blocks add another 4px of inset, so the effective edge is 24px.
-- **Full-screen flow pages** (welcome, login, signup, password reset) hide the tab bar. Each is a vertical stack: a top row 32px from the top and 26px tall, with the back caret (or the wordmark plate) on the left and, on the four signup steps, a step route on the right → headline (28px below) → optional description (8px below) → a 14px-gap stack of fields starting 24px below the header → a flexible spacer → one full-width primary button, 28px from the bottom or the device's safe-area inset, whichever is larger. Secondary links sit centered 16px below that button.
+- **Full-screen flow pages** (welcome, login, signup, password reset, and every /today/* page of the day-of flow) hide the tab bar. Each is a vertical stack: a top row 32px from the top and 26px tall, with the back caret (or the wordmark plate) on the left and, on the four signup steps and the four day-of steps, a step route on the right → headline (28px below) → optional description (8px below) → a 14px-gap stack of fields starting 24px below the header → a flexible spacer → the footer: one full-width primary button, 28px from the bottom or the device's safe-area inset, whichever is larger. Secondary links sit centered 16px below that button.
+- **Sticky footer:** the footer sticks to the bottom on a solid sand-1 backing with 16px above the button, so long pages such as bus detail keep the action in reach while content scrolls under it.
 - **Welcome** is bottom-anchored like a poster at a stop: the plate alone at the top, then open space, then the route mark, headline, and subline stacked right above the button, so the words and the action read as one unit near the thumb.
-- **Tab screens** (오늘 귀가, 사전 신청, 내 QR, 내 정보) sit above a fixed 64px tab bar. The primary action pins above the tab bar.
+- **Tab screens** (오늘 귀가, 사전 신청, 내 QR, 내 정보) sit above a fixed 64px tab bar. Each opens with a 28px title row 32px from the top: the 20px bold title on the left and, where the screen shows sample data, the sample badge on the right, both 4px inset. A primary action uses the same sticky footer, pinned above the tab bar (64px plus the safe-area inset) with 16px below the button; the page reserves that height in its bottom padding.
 - **Rhythm:** a 4px base unit. Fields are 14px apart, label to field is 6px, and major sections are about 48px apart. Lists are separated by hairline dividers, not by gaps.
 - **Driver mockup:** one landscape tablet page. The next stop is very large on the left with its drop-off count in amber-11; remaining stops are listed on the right, split by a sand-6 rule.
 - **QR reader:** a function-first demo page. Its result fills the whole screen in green-9 or red-9 with white text, so it reads from a distance.
@@ -284,7 +326,7 @@ A warm, desaturated Radix Sand neutral carries everything except the next action
 
 ## Elevation & Depth
 
-The system is flat. No component uses a visible `box-shadow` (the inset fill that stops browser autofill from repainting a field is the one technical exception). Depth comes from three tonal steps: base (sand-1), raised (sand-2), and control (sand-3). Borders and focus rings carry the remaining layering. Overlays such as bottom sheets and modals are raised surfaces over a black 60% scrim. The tab bar is opaque sand-1 with a sand-3 top border; there is no translucency or blur anywhere.
+The system is flat. No component uses a visible `box-shadow` (the inset fill that stops browser autofill from repainting a field is the one technical exception). Depth comes from three tonal steps: base (sand-1), raised (sand-2), and control (sand-3). Borders and focus rings carry the remaining layering. Overlays such as bottom sheets and modals are raised surfaces over a black 60% scrim. The tab bar is opaque sand-1 with a sand-3 top border, and the sticky footer is opaque sand-1 too; content scrolls under both with no fade, shadow, translucency, or blur.
 
 **The Flat-at-Night Rule.** Never add shadows. At night on a dark screen they read as mud. To lift something, raise its surface step or give it a border.
 
@@ -292,9 +334,9 @@ The system is flat. No component uses a visible `box-shadow` (the inset fill tha
 
 Corners scale with the size of the element: the bigger the container, the rounder it is.
 
-- **Chips and badges** (4px): the wordmark plate, route-number chips (성북 2번), and status tags.
-- **Controls** (12px): buttons, inputs, select boxes, OTP cells, option cards, and time cells. This is the most common radius in the system.
-- **Cards and grouped lists** (16px): the selected-bus card, grouped settings lists on 내 정보, and the QR card.
+- **Chips and badges** (4px): the wordmark plate, route chips (성북 2번), the sample badge, and status tags.
+- **Controls** (12px): buttons, inputs, select boxes, OTP cells, option cards, bus option cards, time cells, and the bordered time row on bus detail. This is the most common radius in the system.
+- **Cards and grouped lists** (16px): the home ticket card, the walk row, grouped settings lists on 내 정보, and the QR card.
 - **Sheets and modals** (24px): the top two corners only for bottom sheets, all four for centered modals.
 - **Full** (round): step-number badges, the avatar initial, stop dots on route diagrams, the sheet handle, and toggles.
 
@@ -306,7 +348,7 @@ Large and clear, made for one hand. Tap targets are tall, labels are bold, and s
 
 ### Buttons
 
-- **Shape:** gently rounded (12px), 52px tall, full width at the bottom of the screen. The bold 16px label is left-aligned (20px in) and a bold 18px Phosphor arrow-right sits at the right (18px in). The button reads like a timetable line: what happens, then where it goes.
+- **Shape:** gently rounded (12px), 52px tall, full width in the sticky footer at the bottom of the screen. The bold 16px label is left-aligned (20px in) and a bold 18px Phosphor arrow-right sits at the right (18px in). The button reads like a timetable line: what happens, then where it goes.
 - **Primary:** amber-9 background with Fixed Ink text. One per screen. Hover and press both shift to amber-10; press also scales to 0.98. The arrow nudges 2px right on hover and 4px on press, so the button says "go" under the thumb. Scale and nudge are off under reduced motion.
 - **Loading:** stays amber-9 (the light stays on while it works), cursor shows progress, `aria-busy` is set, and the arrow is replaced in place by a spinning bold circle-notch, so the label never moves. The button is disabled while loading.
 - **Motion:** background, text color, scale, and the arrow all move together over 200ms on an exponential ease-out (`cubic-bezier(0.16, 1, 0.3, 1)`). When a form becomes valid, the gray button fades into amber and the arrow lights up: the one light switching on.
@@ -314,7 +356,7 @@ Large and clear, made for one hand. Tap targets are tall, labels are bold, and s
 - **Disabled:** sand-4 background, sand-11 label (6.9:1 dark, 4.9:1 light) so the next step stays readable, and a sand-8 arrow: the label says what comes next, the unlit arrow says "not yet". Used until the form is valid, instead of hiding the button.
 - **Secondary:** sand-4 background with sand-12 text. Used for cancel in modals and 운행 끝내기 on the driver screen.
 - **Danger:** red-9 background with white text. Only for irreversible actions inside a confirm modal.
-- **Text links:** amber-11, 600 weight, no underline (로그인, 비밀번호를 잊었어요, 다시 보내기, 추가). Their hit area is the words, not the whole row. When disabled they turn sand-10.
+- **Text links:** amber-11, 600 weight, no underline (로그인, 비밀번호를 잊었어요, 다시 보내기, 추가). Their hit area is the words, not the whole row. When disabled they turn sand-10. Links inside the ticket card (노선 보기, 버스 바꾸기, 사전 신청으로 가기) are sand-12 at 600, with a sand-11 caret when they lead away, so amber stays on the chip and the countdown.
 
 ### Inputs / Fields
 
@@ -332,15 +374,21 @@ Six 60px-tall cells with 12px gaps: sand-2 fill, sand-5 border, 12px corners, 24
 
 ### Option Cards (selectable lists)
 
-Every list where you pick one item uses this pattern: address search results, starting points, drop-off stops, and the address change screen.
+Every list where you pick one item uses this pattern: address search results, starting points, drop-off stops, and the address change screen. It is one shared button component that reports its state with `aria-pressed`.
 
 - **Rest:** sand-2 fill, 1px sand-5 border, 12px corners, 12px × 16px padding, 8px between cards. The title is 16px semibold; the subtitle is 14px sand-11.
 - **Selected:** amber-8 border, amber-2 fill, and a 2px amber-5 ring.
 - **Pending:** while new results load, the whole list fades to 60% opacity.
+- **Markers:** a sample badge may sit after the title; the default drop-off stop carries 가장 가까워요 in 14px bold amber-11.
+
+### Time Cells
+
+A 3-column grid with 8px gaps, one cell per 30 minutes. Each cell is 60px tall with 12px corners and shows its start time (18px bold, tabular) over ~end (12px, 500). Unselected cells are sand-3 with a sand-3 border and sand-11 ~end. The first tap anchors a range and the second closes it: the two edge cells get an amber-3 fill, amber-8 border, 2px amber-5 ring, and amber-11 text; cells in between are amber-3 with amber-11 text. Under the grid, a summary line reads 01:00–02:00 사이에 타요 with the range in bold sand-12, and the sample badge sits on its right.
 
 ### Chips
 
-- **Route chip:** amber-9 fill, Fixed Ink text, 14px bold, 4px corners (성북 2번). The route number is the bus's identity, so it gets the light.
+- **Route chip:** 24px tall, 6px side padding, 14px bold, 4px corners (성북 2번). Loud (amber-9 fill, Fixed Ink text) only on the home ticket card, where it is the screen's one light. Quiet (amber-3 fill, amber-11 text) in bus lists, so a list of buses doesn't light up.
+- **Sample badge:** 예시 데이터 in 12px semibold sand-11 on sand-3, 20px tall, 4px corners. Required on every surface that shows sample operating data: the tab title row, the context line above lists, a sample starting point, and bus detail.
 - **Status chips:** a 3-step fill with 11-step text, such as green-3 with green-11 for 운행 중 or 인증됨, and red-3 with red-11 for 6명 넘침. Neutral chips are sand-3 with sand-11.
 
 ### Cards / Grouped Lists
@@ -350,17 +398,43 @@ Every list where you pick one item uses this pattern: address search results, st
 - **Border:** none outside. Rows inside are divided by sand-4 hairlines.
 - **Rows:** a 20px sand-11 leading icon, a 16px sand-12 title, an optional 14px sand-11 value, and a sand-8 chevron. Toggles inside rows are amber-9 when on and sand-7 when off.
 
+### Ticket Card (signature)
+
+The home tab is one ticket: a 16px sand-2 card, 20px below the title row, split into regions by full-width sand-4 hairlines rather than gaps. One state shows at a time.
+
+- **Waiting:** a top region (20px inset) with the loud route chip beside the boarding clock (14px semibold sand-11, 01:15 승차), the countdown numeral 16px below in amber-11, then the boarding stop in sand-11. A moved departure adds a 14px semibold line with an amber-11 clock-counter icon (출발이 01:30 → 01:15로 당겨졌어요; the 로/으로 particle follows the last digit). Then the time row on hairlines, the trip timeline, and a bottom row with the seat count on the left and 노선 보기 / 버스 바꾸기 on the right.
+- **Riding:** the chip with 타고 있어요, the stops-left numeral in amber-11, the drop-off arrival line, the riding timeline, and a closing line that the drop-off stop is on the 기사님 screen.
+- **Booked (no bus chosen):** the booked slot as a 20px bold line, a sand-11 note that the QR alone is enough, and a hairline region labeled 집에서 가까운 정류장 with that stop and its walk, stacked label over value. It states a fact, not a drop-off decision, because drop-off for QR-only riders is still open. The pinned 탈 버스 고르기 button above the tab bar is the light.
+- **Arrived:** the route mark with all four stops lit and the house amber (wide spacing), then 20px bold ○○에서 내렸어요 and the walk home.
+- **No service / not booked:** a 20px bold line and a sand-11 explanation; not booked adds a sand-12 link to 사전 신청.
+
+### Time Row
+
+The four time values, always in this order: 정류장까지 / 기다림 / 타고 가요 / 집까지. Four equal cells, each a 12px sand-11 label over the minutes in 16px bold tabular, always written as N분 (never hours). Cells are split by sand-4 hairlines with 12px inset; the first cell's inset matches its container (20px on the ticket card, 16px on bus option cards). It sits between hairlines inside cards, and in its own 12px sand-4 bordered box on bus detail.
+
+### Bus Option Card
+
+The bus list is a list of links, not a selection: each card is a sand-2 block with a sand-5 border and 12px corners, sand-3 while pressed. The top row has the boarding time in 20px bold tabular, 승차 in 14px semibold sand-11, the quiet route chip pushed right, and a sand-8 caret. A 14px sand-11 line says where you board and get off. Below, the time row and the seat count each sit on a sand-4 hairline.
+
+### Seat Count
+
+Riders over capacity (14/28명) in 14px, 500, sand-11, tabular, after a 13px users icon. At 85% full or more it adds · 거의 찼어요 in 600 sand-12: words and weight, never a color.
+
+### Walk Row
+
+The walk to the boarding stop on bus detail, under a 정류장까지 걷기 section rule: a 16px card with a sand-4 border. When a Kakao key is set, a 160px static map (no drag or scroll zoom, two markers, sand-3 while loading) sits on top; if the map fails it is removed and the row stands alone. The row is sand-2 with 16px × 12px padding: a 18px sand-11 walking icon, 걸어서 N분 in semibold tabular over from → to in 14px sand-11, and 길찾기 with an up-right arrow (14px semibold sand-11) that opens Kakao walking directions.
+
 ### Bottom Sheets and Modals
 
-- **Sheet:** sand-2 surface with 24px top corners, a sand-7 full-round grab handle, a 20px bold title with a sand-11 description, and the full-width primary button at the bottom. It sits over a 60% black scrim. Used for the time-range picker and drop-off choice.
+- **Sheet:** sand-2 surface with 24px top corners, a sand-7 full-round grab handle, a 20px bold title with a sand-11 description, and the full-width primary button at the bottom. It sits over a 60% black scrim. Not used yet: the time range and drop-off choice became full flow steps instead.
 - **Modal:** sand-2 surface with 24px corners on all sides, centered over the scrim. Danger and secondary buttons are stacked full width.
 
 ### Navigation
 
-- **Tab bar:** fixed to the bottom, 64px tall plus the safe-area inset, opaque sand-1 with a sand-3 top border, and capped to the column width. It has four equal, full-height items: a 20px Phosphor icon over a 12px label. Inactive tabs use the regular icon in sand-10 at 500; the active tab switches to the fill icon in sand-12 at 700 and carries `aria-current="page"`. It's hidden on /welcome and /reset-password.
+- **Tab bar:** fixed to the bottom, 64px tall plus the safe-area inset, opaque sand-1 with a sand-3 top border, and capped to the column width. It has four equal, full-height items: a 20px Phosphor icon over a 12px label. Inactive tabs use the regular icon in sand-10 at 500; the active tab switches to the fill icon in sand-12 at 700 and carries `aria-current="page"`. It's hidden on /welcome, /reset-password, and every /today/* page.
 - **Back caret:** a 24px Phosphor caret-left in sand-12, top-left, with a 44px round hit area. On the first screen of a flow, the wordmark plate takes its place.
 - **Wordmark plate:** the app name (`VITE_APP_NAME`) in 13px bold capitals with +0.06em tracking, sand-1 on a sand-12 plate with 4px corners and 6px side padding. It inverts per mode, like a lit destination sign. It is never amber, so it never competes with the one light.
-- **Step route:** signup steps 1–4 show a small route at the top right of the header row: one dot per step joined by 14px × 2px sand-6 segments, with the last stop drawn as a 15px Phosphor house. Passed steps are 8px amber-9 dots on amber-9 segments; the current step is a 10px amber-9 dot with a 3px amber-5 ring; later steps are 8px hollow sand-7 dots, and the house stays sand-7 until step 4, where it turns amber-9. Screen readers hear "4단계 중 1단계". The welcome, login, password reset, and signup-complete screens have no step route.
+- **Step route:** signup steps 1–4 and day-of steps 1–4 (출발할 곳, 탈 시간, 버스 고르기 and bus detail, 내릴 정류장) show a small route at the top right of the header row: one dot per step joined by 14px × 2px sand-6 segments, with the last stop drawn as a 15px Phosphor house. Passed steps are 8px amber-9 dots on amber-9 segments; the current step is a 10px amber-9 dot with a 3px amber-5 ring; later steps are 8px hollow sand-7 dots, and the house stays sand-7 until step 4, where it turns amber-9. Screen readers hear "4단계 중 1단계". The welcome, login, password reset, signup-complete, and route-only bus detail (노선 보기) screens have no step route.
 - **Icons:** Phosphor (`@iconify-json/ph`) throughout, loaded through unplugin-icons as `Ph*` components.
 
 ### Step List (signature)
@@ -369,7 +443,7 @@ Numbered instructions (이렇게 타요), drawn as stops on a route, under a sec
 
 ### Section Rule
 
-A section opens with its label (14px, 700, sand-11) followed by a 1px sand-4 hairline that runs to the column's right edge, 12px after the label. Used for 이렇게 타요 and for future grouped sections. It replaces boxed section cards.
+A section opens with its label (14px, 700, sand-11) followed by a 1px sand-4 hairline that runs to the column's right edge, 12px after the label. One shared component, used for 이렇게 타요, and for 정류장까지 걷기 and 노선 on bus detail (32px above each). It replaces boxed section cards.
 
 ### Route Mark (signature)
 
@@ -377,12 +451,17 @@ One component (`RouteDots`) draws every route in the app: the header step route 
 
 - **Welcome:** stop 1 of 4 above the headline: the trip hasn't started.
 - **Signup complete:** all four stops lit and the house amber, in the same place above the headline. It bookends the welcome mark and replaces a generic success icon.
+- **Arrived ticket card:** the same all-lit mark opens the card once the rider is off the bus.
 
-These small markers don't count against the One Light Rule; the rule is about surfaces. Keep route imagery this small and abstract: no maps, street grids, labels, or drawing animations.
+These small markers don't count against the One Light Rule; the rule is about surfaces. Keep route imagery this small and abstract: no drawn maps, street grids, labels, or drawing animations.
 
-### Route Timeline (signature, from mockups)
+### Route Timeline (signature)
 
-A vertical line down the left edge connects the stops. The rider's own ride, from boarding to drop-off, is drawn in amber-9 with filled amber dots at both ends. Stops in between get hollow amber dots. The rest of the route is sand-6 with sand-7 dots, and that text drops to sand-11. Boarding and drop-off stops are bold, with a 승차 or 하차 tag in amber-11. Times are right-aligned in tabular numerals. Walking legs are dotted sand-8.
+A 2px vertical line down the left edge connects the stops, rows 14px apart. The rider's own ride, from boarding to drop-off, is drawn in amber-9 with 12px filled amber-9 dots at both ends; stops in between get 8px hollow dots with a 2px amber-9 ring, names at 500. The rest of the route is sand-6 with 8px hollow sand-7 dots, and that text drops to sand-11. Boarding and drop-off names are bold, with a 승차 or 하차 tag in 14px bold amber-11. Times are right-aligned in 14px tabular numerals: bold sand-12 on tagged stops, 500 sand-11 elsewhere. Walking legs are dotted 2px sand-8 lines; the starting point is a small filled sand-8 dot and home is a 15px sand-11 house. Hollow dots fill with the surface they sit on (sand-2 on a card, sand-1 on the page). Decorative marks are hidden from screen readers.
+
+- **Trip** (waiting ticket card): starting point → 승차 → N개 정류장 지나서 (14px sand-11) → 하차 → 집, with walk minutes under the ends.
+- **Full route** (bus detail, under a 노선 section rule): every stop on the bus, the rider's span lit, with walk notes under 승차 and 하차.
+- **Riding** (riding ticket card): 지금 버스 위치 as a bold 10px amber-9 dot with a 3px amber-5 ring, then the stops still ahead, 하차, and 집.
 
 ### QR Card (signature, from mockups)
 
@@ -393,7 +472,7 @@ The QR card is always light: a white (#fff) 16px card with #21201C modules, even
 ### Do:
 
 - **Do** use amber-9 for exactly one primary action per screen, with #21201C text.
-- **Do** keep the primary button full width, pinned at the bottom, and visible while disabled (sand-4 / sand-11, unlit arrow) rather than hiding it.
+- **Do** keep the primary button full width, in the sticky sand-1 footer at the bottom (above the tab bar on tab screens), and visible while disabled (sand-4 / sand-11, unlit arrow) rather than hiding it.
 - **Do** show focus as an amber-8 border plus a 2px amber-5 ring on every field and selectable card.
 - **Do** rely on the global keyboard focus outline (2px amber-8, 2px offset) for buttons and links, and the amber-5 text selection; both live in `src/tailwind.css`.
 - **Do** reach for weight (600–700) first when a word, number, or label needs emphasis, and keep descriptions at 400–500.
@@ -404,7 +483,7 @@ The QR card is always light: a white (#fff) 16px card with #21201C modules, even
 - **Do** respect the device safe area at the bottom of every screen (footer and tab bar).
 - **Do** define any new color as a Radix step from `src/radix-colors.css` (add palettes through `scripts/radix-colors.ts`), so it works in both modes.
 - **Do** show time as four separate values: walk to the stop, wait for the bus, ride time, and walk home.
-- **Do** label sample operating data as 예시 데이터 on operator and demo screens.
+- **Do** label sample operating data with the 예시 데이터 sample badge on every surface that shows it, student screens included.
 
 ### Don't:
 
@@ -416,3 +495,4 @@ The QR card is always light: a white (#fff) 16px card with #21201C modules, even
 - **Don't** set input text below 16px.
 - **Don't** render the QR code in dark mode colors.
 - **Don't** mix list styles: selectable lists are always bordered option cards, never rows with a checkmark.
+- **Don't** use amber-9 for selected time cells or route chips in lists; selection and lists are amber-3 with amber-11 text.

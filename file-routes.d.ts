@@ -47,6 +47,42 @@ declare module "virtual:file-routes" {
       $$route?: undefined;
     },
     {
+      path: "/(app)/today/buses/:busId";
+      page: true;
+      $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/buses/[busId]"), Extract<"default", keyof typeof import("./src/routes/(app)/today/buses/[busId]")>>>;
+      $$route?: undefined;
+    },
+    {
+      path: "/(app)/today/buses/";
+      page: true;
+      $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/buses/index"), Extract<"default", keyof typeof import("./src/routes/(app)/today/buses/index")>>>;
+      $$route?: undefined;
+    },
+    {
+      path: "/(app)/today/drop-off";
+      page: true;
+      $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/drop-off"), Extract<"default", keyof typeof import("./src/routes/(app)/today/drop-off")>>>;
+      $$route?: undefined;
+    },
+    {
+      path: "/(app)/today/route";
+      page: true;
+      $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/route"), Extract<"default", keyof typeof import("./src/routes/(app)/today/route")>>>;
+      $$route?: undefined;
+    },
+    {
+      path: "/(app)/today/start";
+      page: true;
+      $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/start"), Extract<"default", keyof typeof import("./src/routes/(app)/today/start")>>>;
+      $$route?: undefined;
+    },
+    {
+      path: "/(app)/today/time";
+      page: true;
+      $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/time"), Extract<"default", keyof typeof import("./src/routes/(app)/today/time")>>>;
+      $$route?: undefined;
+    },
+    {
       path: "/(app)/users/";
       page: true;
       $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/users/index"), Extract<"default", keyof typeof import("./src/routes/(app)/users/index")>>>;
@@ -118,6 +154,54 @@ declare module "virtual:file-routes" {
           id: "/users/";
           page: true;
           $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/users/index"), Extract<"default", keyof typeof import("./src/routes/(app)/users/index")>>>;
+          $$route?: undefined;
+          children?: undefined;
+        },
+        {
+          path: "/today/time";
+          id: "/today/time";
+          page: true;
+          $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/time"), Extract<"default", keyof typeof import("./src/routes/(app)/today/time")>>>;
+          $$route?: undefined;
+          children?: undefined;
+        },
+        {
+          path: "/today/route";
+          id: "/today/route";
+          page: true;
+          $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/route"), Extract<"default", keyof typeof import("./src/routes/(app)/today/route")>>>;
+          $$route?: undefined;
+          children?: undefined;
+        },
+        {
+          path: "/today/start";
+          id: "/today/start";
+          page: true;
+          $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/start"), Extract<"default", keyof typeof import("./src/routes/(app)/today/start")>>>;
+          $$route?: undefined;
+          children?: undefined;
+        },
+        {
+          path: "/today/buses/";
+          id: "/today/buses/";
+          page: true;
+          $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/buses/index"), Extract<"default", keyof typeof import("./src/routes/(app)/today/buses/index")>>>;
+          $$route?: undefined;
+          children?: undefined;
+        },
+        {
+          path: "/today/drop-off";
+          id: "/today/drop-off";
+          page: true;
+          $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/drop-off"), Extract<"default", keyof typeof import("./src/routes/(app)/today/drop-off")>>>;
+          $$route?: undefined;
+          children?: undefined;
+        },
+        {
+          path: "/today/buses/:busId";
+          id: "/today/buses/:busId";
+          page: true;
+          $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/buses/[busId]"), Extract<"default", keyof typeof import("./src/routes/(app)/today/buses/[busId]")>>>;
           $$route?: undefined;
           children?: undefined;
         }

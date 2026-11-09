@@ -54,6 +54,15 @@ export function Header(props: {
   );
 }
 
+export function SectionRule(props: { title: string; class?: string }) {
+  return (
+    <div class={["flex items-center gap-x-3 px-1", props.class]}>
+      <h2 class="shrink-0 text-sm font-bold text-sand-11">{props.title}</h2>
+      <span aria-hidden="true" class="h-px flex-1 bg-sand-4" />
+    </div>
+  );
+}
+
 export function RouteDots(props: { current: number; total: number; spacing?: "tight" | "wide" }) {
   return (
     <div aria-hidden="true" class="flex items-center">
@@ -121,9 +130,17 @@ export function Footer(props: {
   buttonLabel: string;
   children?: JSX.Element;
   variant?: ComponentProps<typeof Button>["variant"];
+  aboveTabBar?: boolean;
 }) {
   return (
-    <div class="mt-auto pt-6 pb-[max(1.75rem,env(safe-area-inset-bottom))]">
+    <div
+      class={[
+        "sticky z-10 mt-auto bg-sand-1 pt-4",
+        props.aboveTabBar
+          ? "bottom-[calc(4rem+env(safe-area-inset-bottom))] pb-4"
+          : "bottom-0 pb-[max(1.75rem,env(safe-area-inset-bottom))]",
+      ]}
+    >
       <Button type={props.type} class="w-full" onClick={props.onClick} variant={props.variant}>
         {props.buttonLabel}
       </Button>
