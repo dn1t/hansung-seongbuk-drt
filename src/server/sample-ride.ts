@@ -26,8 +26,6 @@ interface SampleBus {
 interface SampleStart extends StartPoint {
   stopId: string;
   walkToStop: number;
-  lat: number;
-  lng: number;
 }
 
 export const CAPACITY = 28;
@@ -171,7 +169,7 @@ const routeById = (id: string) => ROUTES.find((r) => r.id === id)!;
 export function startPoints(ownSchool: string | undefined): StartPoint[] {
   const own = STARTS.filter((s) => s.name === ownSchool);
   const rest = STARTS.filter((s) => s.name !== ownSchool);
-  return [...own, ...rest].map(({ id, name, kind, isSample }) => ({ id, name, kind, isSample }));
+  return [...own, ...rest].map(({ id, name, kind, isSample, lat, lng }) => ({ id, name, kind, isSample, lat, lng }));
 }
 
 export function startById(id: string | undefined) {

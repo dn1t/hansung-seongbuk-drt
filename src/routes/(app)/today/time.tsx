@@ -24,8 +24,8 @@ export default function TodayTime() {
   const range = (): Range | undefined => {
     const current = picked();
     if (current) return current;
-    const from = indexOf(params.from ?? data().booked.from);
-    const to = indexOf(params.to ?? data().booked.to);
+    const from = indexOf(params.from);
+    const to = indexOf(params.to);
     return from !== -1 && to >= from ? { from, to } : undefined;
   };
 

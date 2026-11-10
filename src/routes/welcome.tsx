@@ -1,24 +1,15 @@
 import { useLocation, useNavigate } from "@solidjs/router";
-import {
-  createMemo,
-  createSignal,
-  Errored,
-  For,
-  isHydrating,
-  isPending,
-  Loading,
-  onSettled,
-  Show,
-  untrack,
-} from "solid-js";
+import { createMemo, createSignal, For, isHydrating, Loading, onSettled, Show, untrack } from "solid-js";
 
+import { AddressPrivacyNote, AddressSearch } from "../components/common/address-search";
 import { Input } from "../components/common/input";
 import { OTPInput } from "../components/common/otp-input";
 import { Select } from "../components/common/select";
 import { Footer, Header, PasswordRules, RouteDots, SectionRule } from "../components/layout/screen";
 import { NAME_MAX_LENGTH, setupAccount } from "../lib/account";
-import { ADDRESS_DETAIL_MAX_LENGTH, type AddressResult, saveHomeAddress, searchAddress } from "../lib/address";
+import { type AddressResult, saveHomeAddress } from "../lib/address";
 import { authClient } from "../lib/auth-client";
+import { afterSignInPath } from "../lib/geo";
 import { getJoinState, getWelcomeState, type JoinState, type JoinStep } from "../lib/join";
 import { isValidPassword, PASSWORD_MAX_LENGTH } from "../lib/password";
 import { SCHOOL_DOMAINS, schoolOf } from "../lib/schools";
@@ -81,15 +72,7 @@ export default function Welcome() {
 
   const submitVariant = (ready: boolean) => (loading() ? "loading" : ready ? "primary" : "disabled");
 
-  const [addressQuery, setAddressQuery] = createSignal("");
   const [selectedAddress, setSelectedAddress] = createSignal<AddressResult>();
-  const addressResults = createMemo(() => (addressQuery().length >= 2 ? searchAddress(addressQuery()) : []));
-  let addressSearchTimer: ReturnType<typeof setTimeout> | undefined;
-
-  function searchAddressSoon(value: string, delay = 300) {
-    clearTimeout(addressSearchTimer);
-    addressSearchTimer = setTimeout(() => setAddressQuery(value.trim()), delay);
-  }
 
   const [now, setNow] = createSignal(Date.now());
   onSettled(() => {
@@ -98,10 +81,7 @@ export default function Welcome() {
       setNotice(entry.notice ?? "");
     }
     const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => {
-      clearInterval(timer);
-      clearTimeout(addressSearchTimer);
-    };
+    return () => clearInterval(timer);
   });
   const remaining = createMemo(() => Math.max(0, Math.ceil(((joinState()?.codeExpiresAt ?? 0) - now()) / 1000)));
   const remainingLabel = () => `${Math.floor(remaining() / 60)}:${String(remaining() % 60).padStart(2, "0")}`;
@@ -142,7 +122,7 @@ export default function Welcome() {
     const next = await getJoinState();
     if (next.step === "complete") {
       revalidateSession();
-      nav("/", { replace: true });
+      nav(await afterSignInPath(), { replace: true });
       return;
     }
     followJoinState(next);
@@ -465,89 +445,11 @@ export default function Welcome() {
             }}
           >
             <div class="mt-4 flex min-h-0 flex-1 flex-col gap-y-3.5">
-              <Input
-                type="search"
-                name="search"
-                placeholder="정릉로 10"
-                icon={PhMagnifyingGlass}
-                autocomplete="off"
-                onInput={(e) => {
-                  setSelectedAddress(undefined);
-                  searchAddressSoon(e.currentTarget.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  e.preventDefault();
-                  searchAddressSoon(e.currentTarget.value, 0);
-                }}
-              />
-              <div class="flex min-h-40 flex-1 basis-0 flex-col overflow-y-auto overscroll-contain">
-                <Errored
-                  fallback={
-                    <span class="m-auto text-red-11">주소를 검색하지 못했어요. 잠시 후 다시 시도해 주세요.</span>
-                  }
-                >
-                  <Loading fallback={<span class="m-auto text-sand-10">검색 중…</span>}>
-                    <Show
-                      when={addressResults().length > 0}
-                      fallback={
-                        <span class="m-auto text-sand-10">
-                          {addressQuery().length < 2
-                            ? "주소를 입력해 주세요."
-                            : isPending(() => addressResults())
-                              ? "검색 중…"
-                              : "검색 결과가 없어요."}
-                        </span>
-                      }
-                    >
-                      <ul
-                        class={[
-                          "flex flex-col gap-y-2 transition-opacity",
-                          { "opacity-60": isPending(() => addressResults()) },
-                        ]}
-                      >
-                        <For each={addressResults()}>
-                          {(result) => (
-                            <li>
-                              <button
-                                type="button"
-                                class={[
-                                  "flex w-full cursor-pointer flex-col gap-y-0.5 rounded-xl border px-4 py-3 text-start",
-                                  selectedAddress()?.id === result.id
-                                    ? "border-amber-8 bg-amber-2 ring-2 ring-amber-5"
-                                    : "border-sand-5 bg-sand-2",
-                                ]}
-                                onClick={() => setSelectedAddress(result)}
-                              >
-                                <span class="font-semibold break-keep">{result.title}</span>
-                                <Show when={result.subtitle}>
-                                  <span class="text-sm break-keep text-sand-11">{result.subtitle}</span>
-                                </Show>
-                              </button>
-                            </li>
-                          )}
-                        </For>
-                      </ul>
-                    </Show>
-                  </Loading>
-                </Errored>
-              </div>
-              <Input
-                name="address2"
-                label="상세 주소 (선택)"
-                placeholder="201동 101호"
-                labelClass="mt-1.5"
-                maxlength={ADDRESS_DETAIL_MAX_LENGTH}
-              />
+              <AddressSearch selected={selectedAddress()} onSelect={setSelectedAddress} />
               <Show when={error()}>
                 <p class="px-1 font-medium text-red-11">{error()}</p>
               </Show>
-              <div class="flex items-center gap-x-1.5 px-1 pb-8 text-sand-11">
-                <PhLockSimple class="shrink-0 text-xs" />
-                <span class="text-sm text-balance break-keep">
-                  주소는 노선을 짤 때만 사용되며, 기사님이나 다른 사용자에게는 보이지 않아요.
-                </span>
-              </div>
+              <AddressPrivacyNote class="pb-8" />
             </div>
             <Footer type="submit" buttonLabel="가입 완료" variant={submitVariant(selectedAddress() !== undefined)} />
           </form>
@@ -592,7 +494,11 @@ export default function Welcome() {
               </For>
             </ol>
           </section>
-          <Footer type="button" buttonLabel="시작하기" onClick={() => nav("/", { replace: true })} />
+          <Footer
+            type="button"
+            buttonLabel="시작하기"
+            onClick={() => void afterSignInPath().then((path) => nav(path, { replace: true }))}
+          />
         </Show>
       </div>
     </Loading>

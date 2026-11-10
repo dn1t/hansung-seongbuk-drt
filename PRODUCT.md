@@ -86,7 +86,7 @@ Bottom tab bar: 오늘 귀가 (tonight's ride), 사전 신청 (advance booking),
 - The browser camera for the QR reader only works over HTTPS.
 - Mobile-first web app: content is held to a max width of `max-w-xl`, the document is `lang="ko"`, and the interface is Korean only.
 
-**Built so far:** welcome, login, signup steps 1–4 plus a completion screen, password reset, and route protection. The home, booking, QR, and account tabs are placeholders.
+**Built so far:** welcome, login, signup steps 1–4 plus a completion screen, password reset, and route protection. All four tabs: 오늘 귀가 with the optional day-of request (on labeled sample route data), 사전 신청 (real bookings in the `bookings` table, on operating nights from the `operating_nights` table; each booking's time and address can be changed or the booking cancelled; time slots are labeled sample data), 내 QR, and 내 정보 (name, home address, password, sign out, account deletion). Operator data entry at /operator, behind a shared `STAFF_CODE`: operating nights (feed 사전 신청 directly) and candidate stops (`stops` table, not yet used by the sample routes). After login or signup the app asks for location permission (skipped if already decided); the starting-point list then marks and sorts by the nearest place. Distance is computed on the phone; the location is never sent to the server. Not built yet: the driver mockup and the QR reader.
 
 ### Open decisions
 

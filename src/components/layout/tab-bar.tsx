@@ -3,8 +3,6 @@ import type { ComponentProps, JSX } from "@solidjs/web";
 import { For, Show } from "solid-js";
 import { cn } from "tailwind-variants";
 
-import { paths } from "../../router";
-
 type Icon = (props: ComponentProps<"svg">) => JSX.Element;
 
 interface Item {
@@ -15,10 +13,10 @@ interface Item {
 }
 
 const items: Item[] = [
-  { href: paths(), icon: PhMoon, selectedIcon: PhMoonFill, label: "오늘 귀가" },
-  { href: paths.users(), icon: PhCalendarBlank, selectedIcon: PhCalendarBlankFill, label: "사전 신청" },
-  { href: paths.users(), icon: PhQrCode, selectedIcon: PhQrCodeFill, label: "내 QR" },
-  { href: paths.users(), icon: PhUser, selectedIcon: PhUserFill, label: "내 정보" },
+  { href: "/", icon: PhMoon, selectedIcon: PhMoonFill, label: "오늘 귀가" },
+  { href: "/booking", icon: PhCalendarBlank, selectedIcon: PhCalendarBlankFill, label: "사전 신청" },
+  { href: "/qr", icon: PhQrCode, selectedIcon: PhQrCodeFill, label: "내 QR" },
+  { href: "/me", icon: PhUser, selectedIcon: PhUserFill, label: "내 정보" },
 ];
 
 function Item(props: Item) {

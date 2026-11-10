@@ -2,7 +2,9 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 
+import { bookings } from "./app-schema";
 import { joinFlow } from "./auth-join";
 import { db } from "./db";
 import { isValidPassword } from "./password";
@@ -32,13 +34,19 @@ export const auth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      if (ctx.path !== "/reset-password") return;
+      if (ctx.path !== "/reset-password" && ctx.path !== "/change-password") return;
       if (!isValidPassword(String(ctx.body?.newPassword ?? ""))) {
         throw new APIError("BAD_REQUEST", { code: "WEAK_PASSWORD", message: "비밀번호 조건을 확인해 주세요." });
       }
     }),
   },
   user: {
+    deleteUser: {
+      enabled: true,
+      async beforeDelete(user) {
+        await db.delete(bookings).where(eq(bookings.userId, user.id));
+      },
+    },
     additionalFields: {
       homeAddress: { type: "string", required: false, input: false, returned: false },
       homeAddressDetail: { type: "string", required: false, input: false, returned: false },

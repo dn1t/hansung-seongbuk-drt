@@ -12,7 +12,6 @@ import { TimeLegs } from "../../components/ride/time-legs";
 import { getTonight, type RideState, type Tonight } from "../../lib/ride";
 import { flowHref } from "../../lib/ride-flow";
 import { formatClock, formatMinutes, minutesBetween, withDirectionParticle } from "../../lib/time";
-import { paths } from "../../router";
 
 type StateOf<K extends Tonight["kind"]> = Extract<Tonight, { kind: K }>;
 
@@ -58,7 +57,7 @@ export default function Home() {
                 <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
                   노선은 미리 신청한 학생들의 집 방향으로 만들어져요. 다음 운행일은 사전 신청에서 미리 신청할 수 있어요.
                 </p>
-                <a href={paths.users()} class="mt-4 flex w-max items-center gap-x-0.5 font-semibold">
+                <a href="/booking" class="mt-4 flex w-max items-center gap-x-0.5 font-semibold">
                   사전 신청으로 가기
                   <PhCaretRightBold aria-hidden="true" class="text-sm text-sand-11" />
                 </a>

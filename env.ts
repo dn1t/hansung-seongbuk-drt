@@ -10,6 +10,7 @@ export default {
     MAILGUN_API_KEY: v.pipe(v.string(), v.minLength(1)),
     MAILGUN_DOMAIN: v.pipe(v.string(), v.minLength(1)),
     KAKAO_REST_API_KEY: v.pipe(v.string(), v.minLength(1)),
+    STAFF_CODE: v.optional(v.string(), ""),
   },
   client: {
     VITE_APP_NAME: v.optional(v.pipe(v.string(), v.minLength(1)), "DRT"),

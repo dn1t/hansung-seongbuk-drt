@@ -36,6 +36,73 @@
   }
 }
 
+@property --fade-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0rem;
+}
+
+@property --fade-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0rem;
+}
+
+@layer components {
+  .sheet {
+    max-height: 90dvh;
+    translate: 0 100%;
+    transition: translate 240ms cubic-bezier(0.4, 0, 1, 1);
+
+    &::backdrop {
+      background: rgb(0 0 0 / 0.6);
+      opacity: 0;
+      transition: opacity 240ms cubic-bezier(0.4, 0, 1, 1);
+    }
+
+    &[data-state="open"] {
+      translate: 0 0;
+      transition:
+        translate 320ms cubic-bezier(0.16, 1, 0.3, 1),
+        padding-bottom 320ms cubic-bezier(0.16, 1, 0.3, 1);
+
+      &::backdrop {
+        opacity: 1;
+        transition: opacity 320ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+    }
+
+    &[data-dragging] {
+      transition: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &,
+      &[data-state="open"] {
+        transition: none;
+      }
+
+      &::backdrop,
+      &[data-state="open"]::backdrop {
+        transition: none;
+      }
+    }
+  }
+
+  .fade-scroll {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--fade-top),
+      #000 calc(100% - var(--fade-bottom)),
+      transparent
+    );
+    transition:
+      --fade-top 200ms ease-out,
+      --fade-bottom 200ms ease-out;
+  }
+}
+
 @theme {
   --font-sans: P, "Pretendard Variable", Pretendard, system-ui, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
   --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);

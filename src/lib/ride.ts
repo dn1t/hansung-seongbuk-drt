@@ -24,6 +24,8 @@ export interface StartPoint {
   name: string;
   kind: "school" | "area";
   isSample: boolean;
+  lat: number;
+  lng: number;
 }
 
 export interface StopTime {
@@ -110,7 +112,7 @@ export const getTonight = query(async (demo: string): Promise<Tonight> => {
     busOption(SAMPLE_DEFAULT_RIDE.busId, fallback, SAMPLE_DEFAULT_RIDE.alightStopId)!;
   const resume = choice
     ? { start: choice.start, from: choice.from, to: choice.to }
-    : { start: startPoints(schoolOf(user.email))[0].id, ...SAMPLE_BOOKED_SLOT };
+    : { start: "", from: "", to: "" };
 
   if (kind === "booked") {
     const dropOff = ride.stops[ride.alightIndex];
@@ -145,7 +147,6 @@ export const getTimeSlots = query(async () => {
   return {
     now: clockToTime(SAMPLE_NOW),
     slots: SAMPLE_SLOTS.map((clock) => ({ clock, at: clockToTime(clock) })),
-    booked: SAMPLE_BOOKED_SLOT,
   };
 }, "time-slots");
 

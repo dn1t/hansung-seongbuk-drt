@@ -21,3 +21,21 @@ export function formatMinutes(minutes: number) {
 export function withDirectionParticle(clock: string) {
   return `${clock}${["0", "3", "6"].includes(clock.at(-1) ?? "") ? "으로" : "로"}`;
 }
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+export function formatDate(night: string) {
+  const date = new Date(`${night}T00:00:00Z`);
+  return `${date.getUTCMonth() + 1}월 ${date.getUTCDate()}일`;
+}
+
+export function formatNight(night: string) {
+  const date = new Date(`${night}T00:00:00Z`);
+  return `${date.getUTCMonth() + 1}월 ${date.getUTCDate()}일 (${WEEKDAYS[date.getUTCDay()]})`;
+}
+
+export function slotRange(slot: string) {
+  const [h, m] = slot.split(":").map(Number);
+  const end = (h * 60 + m + 30) % (24 * 60);
+  return `${slot}–${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
+}
