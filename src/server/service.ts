@@ -14,6 +14,7 @@ export interface ServiceSettings {
   minRiders: number;
   dayOfCutoffMinutes: number;
   noShowLimit: number;
+  foldThinSlots: boolean;
 }
 
 export const DEFAULT_SERVICE: ServiceSettings = {
@@ -25,6 +26,7 @@ export const DEFAULT_SERVICE: ServiceSettings = {
   minRiders: PLAN_SETTINGS.minRiders,
   dayOfCutoffMinutes: 5,
   noShowLimit: 0,
+  foldThinSlots: PLAN_SETTINGS.foldThinSlots,
 };
 
 export const SERVICE_LIMITS = {
@@ -56,6 +58,7 @@ export function validateService(input: ServiceSettings): string | undefined {
       return `${labels[key]}은 ${min}–${max} 사이로 넣어 주세요.`;
   }
   if (input.minRiders > input.capacity) return "최소 인원은 버스 정원보다 많을 수 없어요.";
+  if (typeof input.foldThinSlots !== "boolean") return "한산한 시간대를 합칠지 다시 골라 주세요.";
   return undefined;
 }
 
@@ -85,6 +88,7 @@ export function planSettingsOf(service: ServiceSettings): PlanSettings {
     maxWalkMeters: service.maxWalkMeters,
     maxRideMinutes: service.maxRideMinutes,
     minRiders: service.minRiders,
+    foldThinSlots: service.foldThinSlots,
   };
 }
 

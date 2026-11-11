@@ -1,6 +1,6 @@
 import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { createMemo, createSignal, Loading } from "solid-js";
+import { createMemo, createSignal, Loading, Show } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
 import { NightCalendar } from "../../../../components/booking/night-calendar";
@@ -37,24 +37,42 @@ export default function BookingNights() {
         onBackClick={() => nav("/booking")}
       />
       <Loading fallback={<div class="flex-1" />}>
-        <div class="mt-4">
-          <NightCalendar
-            open={overview().nights}
-            booked={overview().bookings.map((b) => b.night)}
-            selected={selected()}
-            onToggle={toggle}
+        <Show
+          when={overview().nights.length > 0 && !overview().blocked}
+          fallback={
+            <>
+              <p class="mt-4 px-1 font-medium text-balance break-keep">
+                {overview().blocked ??
+                  "지금은 신청할 수 있는 날이 없어요. 신청 기간이 열리면 학교 이메일로 알려 드려요."}
+              </p>
+              <Footer
+                type="button"
+                buttonLabel="사전 신청으로 돌아가기"
+                variant="secondary"
+                onClick={() => nav("/booking")}
+              />
+            </>
+          }
+        >
+          <div class="mt-4">
+            <NightCalendar
+              open={overview().nights}
+              booked={overview().bookings.map((b) => b.night)}
+              selected={selected()}
+              onToggle={toggle}
+            />
+          </div>
+          <p class="mt-4 flex items-center gap-x-1.5 px-1 text-sm font-medium text-sand-11">
+            <span aria-hidden="true" class="size-1 rounded-full bg-amber-9" />
+            신청한 날
+          </p>
+          <Footer
+            type="button"
+            buttonLabel={selected().length > 0 ? `${selected().length}일 골랐어요` : "날짜를 골라 주세요"}
+            variant={selected().length > 0 ? "primary" : "disabled"}
+            onClick={() => nav(flowHref("/booking/new/time", { nights: selected().join(","), slot: params.slot }))}
           />
-        </div>
-        <p class="mt-4 flex items-center gap-x-1.5 px-1 text-sm font-medium text-sand-11">
-          <span aria-hidden="true" class="size-1 rounded-full bg-amber-9" />
-          신청한 날
-        </p>
-        <Footer
-          type="button"
-          buttonLabel={selected().length > 0 ? `${selected().length}일 골랐어요` : "날짜를 골라 주세요"}
-          variant={selected().length > 0 ? "primary" : "disabled"}
-          onClick={() => nav(flowHref("/booking/new/time", { nights: selected().join(","), slot: params.slot }))}
-        />
+        </Show>
       </Loading>
     </div>
   );

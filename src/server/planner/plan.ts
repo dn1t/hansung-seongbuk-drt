@@ -25,6 +25,7 @@ export interface PlanSteps {
   groups: number;
   moved: number;
   merged: number;
+  waiting: number;
 }
 
 export interface PlanResult {
@@ -45,7 +46,9 @@ function fits(route: Route | undefined, size: number, settings: PlanSettings): r
   return route !== undefined && size <= settings.capacity && route.longestRide <= settings.maxRideMinutes;
 }
 
-function sweep(riders: PlanRider[], center: Point, coverage: Coverage, settings: PlanSettings) {
+type Build = (riders: PlanRider[]) => Route | undefined;
+
+function byHomeDirection(riders: PlanRider[], center: Point) {
   const sorted = riders
     .map((rider) => ({ rider, angle: bearing(center, rider.home) }))
     .sort((a, b) => a.angle - b.angle || a.rider.id.localeCompare(b.rider.id));
@@ -60,18 +63,20 @@ function sweep(riders: PlanRider[], center: Point, coverage: Coverage, settings:
       start = i;
     }
   });
-  const ordered = [...sorted.slice(start), ...sorted.slice(0, start)].map((entry) => entry.rider);
+  return [...sorted.slice(start), ...sorted.slice(0, start)].map((entry) => entry.rider);
+}
 
+function cut(ordered: PlanRider[], build: Build, settings: PlanSettings) {
   const groups: { riders: PlanRider[]; route: Route }[] = [];
   let current: PlanRider[] = [];
   let currentRoute: Route | undefined;
   for (const rider of ordered) {
     const trial = [...current, rider];
-    const route = buildRoute(trial, coverage, settings);
+    const route = build(trial);
     if (current.length > 0 && !fits(route, trial.length, settings)) {
       groups.push({ riders: current, route: currentRoute! });
       current = [rider];
-      currentRoute = buildRoute(current, coverage, settings);
+      currentRoute = build(current);
     } else {
       current = trial;
       currentRoute = route;
@@ -86,6 +91,7 @@ function mergeSmallGroups(
   coverage: Coverage,
   settings: PlanSettings,
   reach: { slots: number; degrees: number },
+  asked: (rider: PlanRider) => number,
 ) {
   let merged = 0;
   for (let changed = true; changed;) {
@@ -99,6 +105,7 @@ function mergeSmallGroups(
           (other) =>
             other !== group &&
             Math.abs(other.slot - group.slot) <= reach.slots &&
+            group.riders.every((r) => Math.abs(other.slot - asked(r)) <= reach.slots) &&
             angleBetween(other.bearing, group.bearing) <= reach.degrees &&
             other.riders.length + group.riders.length <= settings.capacity,
         )
@@ -123,46 +130,75 @@ function mergeSmallGroups(
   return merged;
 }
 
-function relocateEdges(
-  groups: Group[],
-  coverage: Coverage,
-  settings: PlanSettings,
-  homeBearing: (r: PlanRider) => number,
-) {
-  let movedRiders = 0;
-  const bySlot = new Map<number, Group[]>();
-  for (const g of groups) bySlot.set(g.slot, [...(bySlot.get(g.slot) ?? []), g]);
-  for (const inSlot of bySlot.values()) {
-    if (inSlot.length < 2) continue;
-    for (let round = 0, moved = true; moved && round < 5; round++) {
-      moved = false;
-      for (const from of inSlot) {
-        if (from.riders.length <= 1) continue;
-        for (const rider of from.riders) {
-          const angle = homeBearing(rider);
-          const target = inSlot
-            .filter((g) => g !== from && g.riders.length < settings.capacity)
-            .sort((a, b) => angleBetween(a.bearing, angle) - angleBetween(b.bearing, angle))[0];
-          if (!target || angleBetween(target.bearing, angle) >= angleBetween(from.bearing, angle)) continue;
-          const fromRiders = from.riders.filter((r) => r !== rider);
-          const toRiders = [...target.riders, rider];
-          const fromRoute = buildRoute(fromRiders, coverage, settings);
-          const toRoute = buildRoute(toRiders, coverage, settings);
-          if (!fits(fromRoute, fromRiders.length, settings) || !fits(toRoute, toRiders.length, settings)) continue;
-          if (fromRoute.duration + toRoute.duration >= from.route.duration + target.route.duration) continue;
-          from.riders = fromRiders;
-          from.route = fromRoute;
-          target.riders = toRiders;
-          target.route = toRoute;
-          from.bearing = meanBearing(from.riders.map(homeBearing));
-          target.bearing = meanBearing(target.riders.map(homeBearing));
-          moved = true;
-          movedRiders++;
-        }
+function rebalanceSlot(inSlot: Group[], build: Build, settings: PlanSettings) {
+  const cost = (route: Route | undefined) => (route ? route.duration + settings.busStartMinutes : 0);
+  const active = () => inSlot.filter((g) => g.riders.length > 0);
+  let moved = 0;
+
+  interface Move {
+    gain: number;
+    from: Group;
+    to: Group;
+    riders: PlanRider[];
+    fromRoute: Route | undefined;
+    toRoute: Route;
+  }
+
+  const tryMove = (from: Group, to: Group, block: PlanRider[]): Move | undefined => {
+    const stay = from.riders.filter((r) => !block.includes(r));
+    if (stay.length > 0 && stay.length < settings.minRiders) return undefined;
+    const joined = [...to.riders, ...block];
+    if (joined.length > settings.capacity) return undefined;
+    const toRoute = build(joined);
+    if (!fits(toRoute, joined.length, settings)) return undefined;
+    const fromRoute = stay.length > 0 ? build(stay) : undefined;
+    if (stay.length > 0 && !fits(fromRoute, stay.length, settings)) return undefined;
+    const gain = cost(from.route) + cost(to.route) - cost(fromRoute) - cost(toRoute);
+    return gain > 0.5 ? { gain, from, to, riders: block, fromRoute, toRoute } : undefined;
+  };
+
+  const bestBetween = (from: Group, to: Group) => {
+    const blocks = new Map<string, PlanRider[]>();
+    for (const r of from.riders) blocks.set(r.board.id, [...(blocks.get(r.board.id) ?? []), r]);
+    const options = [...blocks.values(), ...from.riders.map((r) => [r]), from.riders];
+    const seen = new Set<string>();
+    let best: Move | undefined;
+    for (const block of options) {
+      const key = block.map((r) => r.id).join(",");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const move = tryMove(from, to, block);
+      if (move && (!best || move.gain > best.gain)) best = move;
+    }
+    return best;
+  };
+
+  const known = new Map<Group, Map<Group, Move | undefined>>();
+  for (let round = 0; round < 60; round++) {
+    let best: Move | undefined;
+    for (const from of active()) {
+      let row = known.get(from);
+      if (!row) known.set(from, (row = new Map()));
+      for (const to of active()) {
+        if (to === from) continue;
+        if (!row.has(to)) row.set(to, bestBetween(from, to));
+        const move = row.get(to);
+        if (move && (!best || move.gain > best.gain)) best = move;
       }
     }
+    if (!best) break;
+    const { from, to } = best;
+    from.riders = from.riders.filter((r) => !best!.riders.includes(r));
+    to.riders = [...to.riders, ...best.riders];
+    to.route = best.toRoute;
+    if (best.fromRoute) from.route = best.fromRoute;
+    moved += best.riders.length;
+    for (const changed of [from, to]) {
+      known.delete(changed);
+      for (const row of known.values()) row.delete(changed);
+    }
   }
-  return movedRiders;
+  return moved;
 }
 
 export function districtOf(address: string | undefined) {
@@ -201,28 +237,74 @@ export function planNight(input: PlanInput): PlanResult {
       buses: [],
       unplaced: [...unplaced, ...riders.map((r) => r.id)],
       center: null,
-      steps: { groups: 0, moved: 0, merged: 0 },
+      steps: { groups: 0, moved: 0, merged: 0, waiting: 0 },
     };
   }
 
   const center = centroid([...new Map(riders.map((r) => [r.board.id, r.board])).values()]);
   const coverage = coverageOf(riders, input.candidates, settings.maxWalkMeters);
   const homeBearing = (r: PlanRider) => bearing(center, r.home);
+  const asked = (r: PlanRider) => slotIndex.get(r.slot)!;
+
+  const routes = new Map<string, Route | undefined>();
+  const build: Build = (list) => {
+    const key = list
+      .map((r) => r.id)
+      .sort()
+      .join(",");
+    if (!routes.has(key)) routes.set(key, buildRoute(list, coverage, settings));
+    return routes.get(key);
+  };
+
+  const planSlot = (slot: number, list: PlanRider[]) => {
+    const made: Group[] = cut(byHomeDirection(list, center), build, settings).map((g) => ({ slot, ...g, bearing: 0 }));
+    const started = made.length;
+    const shifted = rebalanceSlot(made, build, settings);
+    const kept = made.filter((g) => g.riders.length > 0);
+    const cost = kept.reduce((sum, g) => sum + g.route.duration + settings.busStartMinutes, 0);
+    return { groups: kept, started, shifted, cost };
+  };
+
+  const bySlot = input.slots.map((slot) => riders.filter((r) => r.slot === slot));
+  const alone = bySlot.map((list, i) => (list.length > 0 ? planSlot(i, list) : undefined));
+  const folded = bySlot.map((list, i) => {
+    const later = bySlot[i + 1];
+    if (!settings.foldThinSlots || list.length === 0 || list.length > settings.capacity) return undefined;
+    if (!later || later.length === 0) return undefined;
+    const together = planSlot(i + 1, [...list, ...later]);
+    const gain = alone[i]!.cost + alone[i + 1]!.cost - together.cost - settings.lateShiftMinutes * list.length;
+    return gain > 0 ? { ...together, gain } : undefined;
+  });
+  const bestFrom: number[] = Array.from({ length: input.slots.length + 2 }, () => 0);
+  for (let i = input.slots.length - 1; i >= 0; i--) {
+    bestFrom[i] = Math.max(bestFrom[i + 1], folded[i] ? folded[i]!.gain + bestFrom[i + 2] : 0);
+  }
 
   const groups: Group[] = [];
-  input.slots.forEach((slot, i) => {
-    const inSlot = riders.filter((r) => r.slot === slot);
-    if (inSlot.length === 0) return;
-    for (const g of sweep(inSlot, center, coverage, settings)) {
-      groups.push({ slot: i, riders: g.riders, route: g.route, bearing: meanBearing(g.riders.map(homeBearing)) });
+  let sweptGroups = 0;
+  let moved = 0;
+  let waiting = 0;
+  for (let i = 0; i < input.slots.length; i++) {
+    const fold = folded[i];
+    const chosen = fold && fold.gain + bestFrom[i + 2] > bestFrom[i + 1] ? fold : alone[i];
+    if (!chosen) continue;
+    if (chosen === fold) {
+      waiting += bySlot[i].length;
+      i++;
     }
-  });
+    groups.push(...chosen.groups);
+    sweptGroups += chosen.started;
+    moved += chosen.shifted;
+  }
 
-  const sweptGroups = groups.length;
-  const moved = relocateEdges(groups, coverage, settings, homeBearing);
+  for (let i = groups.length - 1; i >= 0; i--) if (groups[i].riders.length === 0) groups.splice(i, 1);
+  const rebalanced = groups.length;
+  for (const g of groups) g.bearing = meanBearing(g.riders.map(homeBearing));
   const merged =
-    mergeSmallGroups(groups, coverage, settings, { slots: 1, degrees: settings.mergeBearingDegrees }) +
-    mergeSmallGroups(groups, coverage, settings, { slots: 2, degrees: settings.mergeBearingDegrees * 2 });
+    sweptGroups -
+    rebalanced +
+    mergeSmallGroups(groups, coverage, settings, { slots: 1, degrees: settings.mergeBearingDegrees }, asked) +
+    mergeSmallGroups(groups, coverage, settings, { slots: 2, degrees: settings.mergeBearingDegrees * 2 }, asked);
   for (const g of groups) g.bearing = meanBearing(g.riders.map(homeBearing));
 
   const names = nameBuses(groups, input.slots);
@@ -235,5 +317,5 @@ export function planNight(input: PlanInput): PlanResult {
       route: g.route,
     }));
 
-  return { buses, unplaced, center, steps: { groups: sweptGroups, moved, merged } };
+  return { buses, unplaced, center, steps: { groups: sweptGroups, moved, merged, waiting } };
 }

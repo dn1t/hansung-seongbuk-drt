@@ -201,6 +201,61 @@ describe("planNight", () => {
     assert.equal(plan.buses[0].route.seats.length, 12);
   });
 
+  it("folds a thin slot into the next one and splits the riders by direction", () => {
+    const north = { lat: 37.655, lng: 127.065 };
+    const east = { lat: 37.6, lng: 127.09 };
+    const group = (slot: string, home: Point, from: number): PlanRider[] =>
+      riders(60, 11)
+        .slice(from, from + 6)
+        .map((r, k) => ({
+          ...r,
+          id: `${slot}-${home.lat}-${k}`,
+          slot,
+          home: { lat: home.lat + k * 0.0005, lng: home.lng + k * 0.0005 },
+        }));
+    const thin = [
+      ...group("23:00", north, 0),
+      ...group("23:00", east, 6),
+      ...group("23:30", north, 12),
+      ...group("23:30", east, 18),
+    ];
+    const folded = planNight({ slots: SLOTS, riders: thin, candidates, settings: PLAN_SETTINGS });
+    const apart = planNight({
+      slots: SLOTS,
+      riders: thin,
+      candidates,
+      settings: { ...PLAN_SETTINGS, foldThinSlots: false, minRiders: 1 },
+    });
+
+    assert.deepEqual([...new Set(folded.buses.map((b) => b.slot))], ["23:30"]);
+    assert.equal(folded.steps.waiting, 12);
+    assert.deepEqual([...new Set(apart.buses.map((b) => b.slot))].sort(), ["23:00", "23:30"]);
+    assert.equal(apart.steps.waiting, 0);
+    const minutes = (plan: typeof folded) => plan.buses.reduce((sum, b) => sum + b.route.duration, 0);
+    assert.ok(minutes(folded) < minutes(apart), `${minutes(folded)} >= ${minutes(apart)}`);
+  });
+
+  it("never sends a rider more than two slots from the one they asked for", () => {
+    const asked = new Map(input.map((r) => [r.id, SLOTS.indexOf(r.slot)]));
+    for (const bus of result.buses) {
+      for (const seat of bus.route.seats) {
+        const shift = SLOTS.indexOf(bus.slot) - asked.get(seat.riderId)!;
+        assert.ok(Math.abs(shift) <= 2, `${seat.riderId} moved ${shift} slots`);
+      }
+    }
+  });
+
+  it("uses no more bus time than grouping by direction alone", () => {
+    const plain = planNight({
+      slots: SLOTS,
+      riders: input,
+      candidates,
+      settings: { ...PLAN_SETTINGS, foldThinSlots: false, walkWeight: 1000 },
+    });
+    const minutes = (plan: typeof result) => plan.buses.reduce((sum, b) => sum + b.route.duration, 0);
+    assert.ok(minutes(result) <= minutes(plain), `${minutes(result)} > ${minutes(plain)}`);
+  });
+
   it("plans nothing without stops", () => {
     const plan = planNight({ slots: SLOTS, riders: input.slice(0, 3), candidates: [], settings: PLAN_SETTINGS });
     assert.equal(plan.buses.length, 0);

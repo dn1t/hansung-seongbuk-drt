@@ -7,6 +7,7 @@ import { RouteChip } from "../ride/badges";
 export function BusCard(props: {
   bus: PlanBusView & { demoRiders?: number };
   fixed: boolean;
+  color?: string;
   onToggle?: (open: boolean) => void;
 }) {
   const moved = () => props.bus.departs !== props.bus.plannedDeparts;
@@ -23,6 +24,15 @@ export function BusCard(props: {
             <span class="text-sm font-medium text-sand-10 tabular-nums line-through">
               {formatClock(props.bus.plannedDeparts)}
             </span>
+          </Show>
+          <Show when={props.color}>
+            {(color) => (
+              <span
+                aria-hidden="true"
+                class="h-1.5 w-5 shrink-0 rounded-full"
+                style={{ "background-color": color() }}
+              />
+            )}
           </Show>
           <RouteChip name={props.bus.name} quiet />
           <PhCaretDownBold
@@ -44,20 +54,20 @@ export function BusCard(props: {
         </span>
       </summary>
       <ol class="border-t border-sand-4 px-4 py-3">
-        <For each={props.bus.stops}>
+        <For each={props.bus.stops} keyed={false}>
           {(stop) => (
             <li class="flex items-center gap-x-3 py-1 text-sm">
-              <span class="w-11 shrink-0 font-medium text-sand-11 tabular-nums">{formatClock(stop.at)}</span>
-              <span class={["min-w-0 flex-1 break-keep", stop.kind === "board" ? "font-semibold" : "font-medium"]}>
-                {stop.name}
+              <span class="w-11 shrink-0 font-medium text-sand-11 tabular-nums">{formatClock(stop().at)}</span>
+              <span class={["min-w-0 flex-1 break-keep", stop().kind === "board" ? "font-semibold" : "font-medium"]}>
+                {stop().name}
               </span>
               <span
                 class={[
                   "shrink-0 font-semibold tabular-nums",
-                  stop.kind === "board" ? "text-amber-11" : "text-sand-11",
+                  stop().kind === "board" ? "text-amber-11" : "text-sand-11",
                 ]}
               >
-                {stop.kind === "board" ? "타요" : "내려요"} {stop.riders}명
+                {stop().kind === "board" ? "타요" : "내려요"} {stop().riders}명
               </span>
             </li>
           )}

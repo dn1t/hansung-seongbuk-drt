@@ -10,6 +10,7 @@ import { formatClock } from "../../lib/time";
 
 const SCAN_EVERY_MS = 250;
 const SAME_CODE_PAUSE_MS = 5000;
+const CAMERA_TIMEOUT_MS = 8000;
 
 type Camera = "off" | "starting" | "on" | "error";
 
@@ -31,12 +32,17 @@ export default function OperatorReader() {
   const bus = () => data().buses.find((b) => b.id === busId());
 
   const [camera, setCamera] = createSignal<Camera>("off");
+  const [cameraError, setCameraError] = createSignal("");
+  const [cameras, setCameras] = createSignal<{ id: string; label: string }[]>([]);
+  const [cameraId, setCameraId] = createSignal("");
   const [result, setResult] = createSignal<BoardingResult>();
   const [checking, setChecking] = createSignal(false);
   const [manual, setManual] = createSignal("");
 
   let video: HTMLVideoElement | undefined;
   let canvas: HTMLCanvasElement | undefined;
+  let preview: HTMLCanvasElement | undefined;
+  let frame = 0;
   let stream: MediaStream | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let detector: Detector | undefined;
@@ -62,7 +68,13 @@ export default function OperatorReader() {
 
   async function decode() {
     if (!video || video.readyState < 2) return undefined;
-    if (detector) return (await detector.detect(video))[0]?.rawValue;
+    if (detector) {
+      try {
+        return (await detector.detect(video))[0]?.rawValue;
+      } catch {
+        detector = undefined;
+      }
+    }
     const { default: jsQR } = await import("jsqr");
     canvas ??= document.createElement("canvas");
     const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
@@ -88,28 +100,119 @@ export default function OperatorReader() {
     }, SCAN_EVERY_MS);
   }
 
+  function drawPreview() {
+    const source = video;
+    const target = preview;
+    if (!source || !target || !stream) return;
+    if (source.videoWidth > 0) {
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      const width = Math.round(target.clientWidth * ratio);
+      const height = Math.round(target.clientHeight * ratio);
+      if (target.width !== width || target.height !== height) {
+        target.width = width;
+        target.height = height;
+      }
+      const scale = Math.max(width / source.videoWidth, height / source.videoHeight);
+      const drawWidth = source.videoWidth * scale;
+      const drawHeight = source.videoHeight * scale;
+      target
+        .getContext("2d")
+        ?.drawImage(source, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+    }
+    frame = requestAnimationFrame(drawPreview);
+  }
+
   function stopCamera() {
+    cancelAnimationFrame(frame);
     clearTimeout(timer);
     stream?.getTracks().forEach((track) => track.stop());
     stream = undefined;
   }
 
-  async function startCamera() {
-    if (!navigator.mediaDevices?.getUserMedia || !video) {
-      setCamera("error");
+  function failCamera(message: string) {
+    stopCamera();
+    setCameraError(message);
+    setCamera("error");
+  }
+
+  async function openStream(deviceId?: string) {
+    if (deviceId)
+      return navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } }, audio: false });
+    try {
+      return await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      if (name !== "OverconstrainedError" && name !== "NotFoundError") throw err;
+      return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+  }
+
+  async function listCameras(current: MediaStream) {
+    const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+    const found = devices
+      .filter((device) => device.kind === "videoinput" && device.deviceId)
+      .map((device, i) => ({ id: device.deviceId, label: device.label || `카메라 ${i + 1}` }));
+    setCameras(found);
+    setCameraId(current.getVideoTracks()[0]?.getSettings().deviceId ?? found[0]?.id ?? "");
+  }
+
+  async function startCamera(deviceId?: string) {
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      failCamera("이 브라우저에서는 카메라를 쓸 수 없어요. https 주소를 Safari나 Chrome에서 열어 주세요.");
       return;
     }
+    const el = video;
+    if (!el) {
+      failCamera("카메라 화면을 준비하지 못했어요. 새로고침하고 다시 눌러 주세요.");
+      return;
+    }
+    stopCamera();
     setCamera("starting");
     try {
-      detector = window.BarcodeDetector ? new window.BarcodeDetector({ formats: ["qr_code"] }) : undefined;
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-      video.srcObject = stream;
-      await video.play();
+      stream = await openStream(deviceId);
+      void listCameras(stream);
+      el.muted = true;
+      el.playsInline = true;
+      el.setAttribute("playsinline", "");
+      el.setAttribute("autoplay", "");
+      el.srcObject = stream;
+      const showing = new Promise<void>((resolve) => {
+        if (el.readyState >= 2) return resolve();
+        el.addEventListener("loadeddata", () => resolve(), { once: true });
+      });
+      void el.play().catch(() => undefined);
+      const shown = await Promise.race([
+        showing.then(() => true),
+        new Promise<false>((resolve) => setTimeout(() => resolve(false), CAMERA_TIMEOUT_MS)),
+      ]);
+      if (!shown) {
+        failCamera(
+          cameras().length > 1
+            ? "이 카메라에서 화면이 나오지 않아요. 아래에서 다른 카메라를 골라 주세요."
+            : "카메라는 열렸지만 화면이 나오지 않아요. 새로고침하고 다시 눌러 주세요.",
+        );
+        return;
+      }
+      try {
+        detector = window.BarcodeDetector ? new window.BarcodeDetector({ formats: ["qr_code"] }) : undefined;
+      } catch {
+        detector = undefined;
+      }
+      if (el.paused) await el.play().catch(() => undefined);
       setCamera("on");
+      frame = requestAnimationFrame(drawPreview);
       scan();
-    } catch {
-      stopCamera();
-      setCamera("error");
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      failCamera(
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "카메라 권한이 막혀 있어요. 브라우저 설정에서 이 사이트의 카메라를 허용하고 다시 눌러 주세요."
+          : name === "NotFoundError" || name === "OverconstrainedError"
+            ? "이 기기에서 카메라를 찾지 못했어요."
+            : name === "NotReadableError" || name === "AbortError"
+              ? "다른 앱이 카메라를 쓰고 있어요. 그 앱을 닫고 다시 눌러 주세요."
+              : `카메라를 열지 못했어요${name ? ` (${name})` : ""}. 다시 눌러 주세요.`,
+      );
     }
   }
 
@@ -177,18 +280,22 @@ export default function OperatorReader() {
             muted
             playsinline
             aria-label="QR을 비추는 카메라 화면"
-            class={["size-full object-cover", camera() === "on" ? "block" : "hidden"]}
+            class="absolute inset-0 size-full object-cover"
+          />
+          <canvas
+            ref={(el) => (preview = el)}
+            aria-hidden="true"
+            class="absolute inset-0 size-full"
+            onClick={() => void video?.play().catch(() => undefined)}
           />
           <Show when={camera() === "on"}>
             <span aria-hidden="true" class="absolute inset-[18%] rounded-2xl border-2 border-amber-9" />
           </Show>
           <Show when={camera() !== "on"}>
-            <div class="absolute inset-0 flex flex-col items-center justify-center gap-y-3 px-6 text-center">
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-y-3 bg-sand-3 px-6 text-center">
               <PhCameraBold aria-hidden="true" class="text-3xl text-sand-11" />
               <p class="font-medium text-balance break-keep text-sand-11">
-                {camera() === "error"
-                  ? "카메라를 열지 못했어요. 브라우저에서 카메라를 허용하고, https 주소로 열어 주세요."
-                  : "카메라를 켜면 QR을 자동으로 읽어요."}
+                {camera() === "error" ? cameraError() : "카메라를 켜면 QR을 자동으로 읽어요."}
               </p>
               <Button
                 type="button"
@@ -201,6 +308,23 @@ export default function OperatorReader() {
             </div>
           </Show>
         </div>
+        <Show when={cameras().length > 1}>
+          <label class="mt-3 flex items-center gap-x-3 px-1">
+            <span class="shrink-0 text-sm font-semibold text-sand-11">카메라</span>
+            <select
+              class="h-10 min-w-0 flex-1 cursor-pointer truncate rounded-xl border border-sand-5 bg-sand-2 px-3 font-medium focus:border-amber-8 focus:ring-2 focus:ring-amber-5 focus:outline-none"
+              onChange={(e) => void startCamera(e.currentTarget.value)}
+            >
+              <For each={cameras()} keyed={(item) => item.id}>
+                {(item) => (
+                  <option value={item().id} selected={item().id === cameraId()}>
+                    {item().label}
+                  </option>
+                )}
+              </For>
+            </select>
+          </label>
+        </Show>
 
         <div role="status" aria-live="assertive" class="mt-4 min-h-28">
           <Switch>

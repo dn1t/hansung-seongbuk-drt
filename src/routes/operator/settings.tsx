@@ -16,7 +16,8 @@ type Field =
   | "maxRideMinutes"
   | "minRiders"
   | "dayOfCutoffMinutes"
-  | "noShowLimit";
+  | "noShowLimit"
+  | "foldThinSlots";
 type Status = { kind: "saved" | "error"; text: string };
 
 const walkMinutes = (meters: number) => Math.max(1, Math.ceil((meters * 1.3) / 75));
@@ -50,6 +51,7 @@ export default function OperatorSettings() {
       minRiders: Number(value("minRiders")),
       dayOfCutoffMinutes: Number(value("dayOfCutoffMinutes")),
       noShowLimit: Number(value("noShowLimit")),
+      foldThinSlots: value("foldThinSlots") === "true",
     });
     setBusy(false);
     if (result.ok) setDraft({});
@@ -161,6 +163,22 @@ export default function OperatorSettings() {
                 hint="한 학생이 버스에 타 있는 시간이 이보다 길어지면 버스를 나눠요."
               />
             </div>
+
+            <label class="mt-6 flex cursor-pointer items-start gap-x-3 px-1">
+              <input
+                type="checkbox"
+                checked={value("foldThinSlots") === "true"}
+                class="mt-0.5 size-4.5 shrink-0 cursor-pointer accent-amber-9"
+                onChange={(e) => set("foldThinSlots", String(e.currentTarget.checked))}
+              />
+              <span class="flex flex-col">
+                <span class="font-semibold">한산한 시간대는 다음 시간대와 합치기</span>
+                <span class="text-sm font-medium break-keep text-sand-11">
+                  버스 한 대를 못 채우는 시간대는, 합치는 쪽이 운행 시간을 충분히 줄일 때 다음 시간대와 합쳐 방향별로
+                  나눠요. 그 시간대 학생은 30분 뒤 버스를 타요. 끄면 고른 시간대 그대로 출발해요.
+                </span>
+              </span>
+            </label>
 
             <div class="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
               <Button type="submit" class="w-40" variant={busy() ? "loading" : changed() ? "primary" : "disabled"}>

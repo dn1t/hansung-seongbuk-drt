@@ -36,37 +36,62 @@ export interface Route {
 export interface Coverage {
   candidates: Place[];
   near: Map<string, number[]>;
+  walks: Map<string, Map<number, number>>;
+  legs: Map<number, number>;
 }
 
-export function coverageOf(riders: { id: string; home: Point }[], candidates: Place[], maxWalkMeters: number) {
+type Home = { id: string; home: Point };
+
+export function coverageOf(riders: Home[], candidates: Place[], maxWalkMeters: number) {
   const near = new Map<string, number[]>();
+  const walks = new Map<string, Map<number, number>>();
   for (const rider of riders) {
     const list: number[] = [];
+    const meters = new Map<number, number>();
     candidates.forEach((stop, i) => {
-      if (distance(stop, rider.home) <= maxWalkMeters) list.push(i);
+      const d = distance(stop, rider.home);
+      if (d > maxWalkMeters) return;
+      list.push(i);
+      meters.set(i, d);
     });
     near.set(rider.id, list);
+    walks.set(rider.id, meters);
   }
-  return { candidates, near } satisfies Coverage;
+  return { candidates, near, walks, legs: new Map() } satisfies Coverage;
 }
 
-export function chooseDropOffs(riders: { id: string; home: Point }[], coverage: Coverage) {
+function walkTo(coverage: Coverage, rider: Home, i: number) {
+  return coverage.walks.get(rider.id)?.get(i) ?? distance(coverage.candidates[i], rider.home);
+}
+
+function inReach(coverage: Coverage, rider: Home, i: number) {
+  return coverage.walks.get(rider.id)?.has(i) ?? false;
+}
+
+function legBetween(coverage: Coverage, i: number, j: number) {
+  if (i === j) return 0;
+  const key = i < j ? i * coverage.candidates.length + j : j * coverage.candidates.length + i;
+  let d = coverage.legs.get(key);
+  if (d === undefined) coverage.legs.set(key, (d = distance(coverage.candidates[i], coverage.candidates[j])));
+  return d;
+}
+
+export function chooseDropOffs(riders: Home[], coverage: Coverage) {
   const { candidates } = coverage;
   const assignment = new Map<string, number>();
   if (candidates.length === 0) return assignment;
 
-  const uncovered = new Set(riders.filter((r) => (coverage.near.get(r.id) ?? []).length > 0).map((r) => r.id));
-  const homeOf = new Map(riders.map((r) => [r.id, r.home]));
+  const uncovered = new Set(riders.filter((r) => (coverage.near.get(r.id) ?? []).length > 0));
   const chosen = new Set<number>();
 
   while (uncovered.size > 0) {
     const gain = new Map<number, { count: number; walk: number }>();
-    for (const riderId of uncovered) {
-      for (const i of coverage.near.get(riderId)!) {
-        const entry = gain.get(i) ?? { count: 0, walk: 0 };
+    for (const rider of uncovered) {
+      for (const i of coverage.near.get(rider.id)!) {
+        let entry = gain.get(i);
+        if (!entry) gain.set(i, (entry = { count: 0, walk: 0 }));
         entry.count += 1;
-        entry.walk += distance(candidates[i], homeOf.get(riderId)!);
-        gain.set(i, entry);
+        entry.walk += walkTo(coverage, rider, i);
       }
     }
     let best = -1;
@@ -78,16 +103,16 @@ export function chooseDropOffs(riders: { id: string; home: Point }[], coverage: 
       }
     }
     chosen.add(best);
-    for (const riderId of uncovered) {
-      if (coverage.near.get(riderId)!.includes(best)) uncovered.delete(riderId);
+    for (const rider of uncovered) {
+      if (inReach(coverage, rider, best)) uncovered.delete(rider);
     }
   }
 
-  const nearestOf = (home: Point, pool: Iterable<number>) => {
+  const nearestOf = (rider: Home, pool: Iterable<number>) => {
     let best = -1;
     let bestDistance = Infinity;
     for (const i of pool) {
-      const d = distance(candidates[i], home);
+      const d = walkTo(coverage, rider, i);
       if (d < bestDistance) {
         best = i;
         bestDistance = d;
@@ -97,10 +122,96 @@ export function chooseDropOffs(riders: { id: string; home: Point }[], coverage: 
   };
 
   for (const rider of riders) {
-    if ((coverage.near.get(rider.id) ?? []).length === 0) chosen.add(nearestOf(rider.home, candidates.keys()));
+    if ((coverage.near.get(rider.id) ?? []).length === 0) chosen.add(nearestOf(rider, candidates.keys()));
   }
-  for (const rider of riders) assignment.set(rider.id, nearestOf(rider.home, chosen));
+  for (const rider of riders) assignment.set(rider.id, nearestOf(rider, chosen));
   return assignment;
+}
+
+function refineDropOffs(
+  order: number[],
+  assignment: Map<string, number>,
+  riders: Home[],
+  coverage: Coverage,
+  from: Point,
+  settings: PlanSettings,
+) {
+  const { candidates } = coverage;
+  const walkCost = (meters: number) =>
+    ((meters * settings.walkDetour) / settings.walkMetersPerMinute) * settings.walkWeight;
+  const drive = (meters: number) => driveMinutes(meters, settings);
+  const fromStart = new Map<number, number>();
+  const leg = (a: number | undefined, b: number) => {
+    if (a !== undefined) return legBetween(coverage, a, b);
+    let d = fromStart.get(b);
+    if (d === undefined) fromStart.set(b, (d = distance(from, candidates[b])));
+    return d;
+  };
+  const at = new Map<number, Home[]>();
+  for (const rider of riders) {
+    const stop = assignment.get(rider.id)!;
+    at.set(stop, [...(at.get(stop) ?? []), rider]);
+  }
+
+  for (let round = 0, changed = true; changed && round < order.length * 3 + 3; round++) {
+    changed = false;
+    for (let pos = 0; pos < order.length && !changed; pos++) {
+      const stop = order[pos];
+      const here = at.get(stop) ?? [];
+      if (here.some((r) => (coverage.near.get(r.id) ?? []).length === 0)) continue;
+
+      const prev = pos > 0 ? order[pos - 1] : undefined;
+      const next = pos < order.length - 1 ? order[pos + 1] : undefined;
+      const legs = (i: number) => leg(prev, i) + (next === undefined ? 0 : legBetween(coverage, i, next));
+      const current = legs(stop);
+      const walked = here.reduce((sum, r) => sum + walkTo(coverage, r, stop), 0);
+
+      let best: { gain: number; apply: () => void } | undefined;
+      const consider = (gain: number, apply: () => void) => {
+        if (gain > 0.05 && (!best || gain > best.gain)) best = { gain, apply };
+      };
+
+      if (order.length > 1) {
+        const moves = here.map((rider) => {
+          let target = -1;
+          for (const other of order) {
+            if (other === stop || !inReach(coverage, rider, other)) continue;
+            if (target === -1 || walkTo(coverage, rider, other) < walkTo(coverage, rider, target)) target = other;
+          }
+          return { rider, target };
+        });
+        if (moves.every((move) => move.target !== -1)) {
+          const rewalked = moves.reduce((sum, m) => sum + walkTo(coverage, m.rider, m.target), 0);
+          const saved = drive(current - (next === undefined ? 0 : leg(prev, next))) + settings.dwellMinutes;
+          consider(saved - walkCost(rewalked - walked), () => {
+            for (const move of moves) {
+              assignment.set(move.rider.id, move.target);
+              at.get(move.target)!.push(move.rider);
+            }
+            at.delete(stop);
+            order.splice(pos, 1);
+          });
+        }
+      }
+
+      const [first, ...rest] = here;
+      for (const i of first ? coverage.near.get(first.id)! : []) {
+        if (i === stop || at.has(i) || rest.some((r) => !inReach(coverage, r, i))) continue;
+        const rewalked = here.reduce((sum, r) => sum + walkTo(coverage, r, i), 0);
+        consider(drive(current - legs(i)) - walkCost(rewalked - walked), () => {
+          for (const r of here) assignment.set(r.id, i);
+          at.set(i, here);
+          at.delete(stop);
+          order[pos] = i;
+        });
+      }
+
+      if (best) {
+        best.apply();
+        changed = true;
+      }
+    }
+  }
 }
 
 export function orderPath(nodes: Point[], from?: Point, to?: Point) {
@@ -129,11 +240,17 @@ export function orderPath(nodes: Point[], from?: Point, to?: Point) {
     current = nodes[next];
   }
 
-  const path: (Point | number)[] = [...(from ? [from] : []), ...order, ...(to ? [to] : [])];
-  const pointAt = (k: number) => {
-    const entry = path[k];
-    return typeof entry === "number" ? nodes[entry] : entry;
+  const FROM = nodes.length;
+  const TO = nodes.length + 1;
+  const points = [...nodes, from ?? nodes[0], to ?? nodes[0]];
+  const size = points.length;
+  const known = new Float64Array(size * size).fill(-1);
+  const between = (a: number, b: number) => {
+    const key = a * size + b;
+    if (known[key] < 0) known[key] = known[b * size + a] = distance(points[a], points[b]);
+    return known[key];
   };
+  const path: number[] = [...(from ? [FROM] : []), ...order, ...(to ? [TO] : [])];
   const lo = from ? 1 : 0;
   const hi = path.length - (to ? 2 : 1);
   const last = path.length - 1;
@@ -142,10 +259,8 @@ export function orderPath(nodes: Point[], from?: Point, to?: Point) {
     improved = false;
     for (let i = lo; i < hi; i++) {
       for (let j = i + 1; j <= hi; j++) {
-        const before =
-          (i > 0 ? distance(pointAt(i - 1), pointAt(i)) : 0) + (j < last ? distance(pointAt(j), pointAt(j + 1)) : 0);
-        const after =
-          (i > 0 ? distance(pointAt(i - 1), pointAt(j)) : 0) + (j < last ? distance(pointAt(i), pointAt(j + 1)) : 0);
+        const before = (i > 0 ? between(path[i - 1], path[i]) : 0) + (j < last ? between(path[j], path[j + 1]) : 0);
+        const after = (i > 0 ? between(path[i - 1], path[j]) : 0) + (j < last ? between(path[i], path[j + 1]) : 0);
         if (after < before - 0.01) {
           const segment = path.slice(i, j + 1).reverse();
           path.splice(i, segment.length, ...segment);
@@ -155,7 +270,7 @@ export function orderPath(nodes: Point[], from?: Point, to?: Point) {
     }
   }
 
-  return path.slice(lo, hi + 1) as number[];
+  return path.slice(lo, hi + 1);
 }
 
 export function buildRoute(riders: RouteRider[], coverage: Coverage, settings: PlanSettings): Route | undefined {
@@ -163,12 +278,23 @@ export function buildRoute(riders: RouteRider[], coverage: Coverage, settings: P
 
   const pickups = [...new Map(riders.map((r) => [r.board.id, r.board])).values()];
   const assignment = chooseDropOffs(riders, coverage);
-  const dropIndexes = [...new Set(assignment.values())];
-  const drops = dropIndexes.map((i) => coverage.candidates[i]);
+  const firstDrops = [...new Set(assignment.values())];
 
-  const pickupOrder = orderPath(pickups, undefined, centroid(drops));
+  const pickupOrder = orderPath(pickups, undefined, centroid(firstDrops.map((i) => coverage.candidates[i])));
   const lastPickup = pickups[pickupOrder.at(-1)!];
-  const dropOrder = orderPath(drops, lastPickup);
+  const visitOrder = (indexes: number[]) => {
+    const order = orderPath(
+      indexes.map((i) => coverage.candidates[i]),
+      lastPickup,
+    );
+    return order.map((k) => indexes[k]);
+  };
+
+  const refined = visitOrder(firstDrops);
+  refineDropOffs(refined, assignment, riders, coverage, lastPickup, settings);
+  const dropIndexes = visitOrder(refined);
+  const drops = dropIndexes.map((i) => coverage.candidates[i]);
+  const dropOrder = dropIndexes.map((_, k) => k);
 
   const places: Omit<RouteStop, "offset">[] = [
     ...pickupOrder.map((i) => ({ place: pickups[i], kind: "board" as const })),
@@ -192,7 +318,7 @@ export function buildRoute(riders: RouteRider[], coverage: Coverage, settings: P
       riderId: rider.id,
       board: boardIndex.get(rider.board.id)!,
       alight,
-      walkMeters: distance(stops[alight].place, rider.home),
+      walkMeters: walkTo(coverage, rider, assignment.get(rider.id)!),
     };
   });
 

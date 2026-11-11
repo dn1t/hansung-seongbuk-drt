@@ -529,6 +529,7 @@ export async function saveOperatorService(input: ServiceSettings): Promise<Opera
     minRiders: Number(input.minRiders),
     dayOfCutoffMinutes: Number(input.dayOfCutoffMinutes),
     noShowLimit: Number(input.noShowLimit),
+    foldThinSlots: input.foldThinSlots !== false,
   };
   const invalid = validateService(settings);
   if (invalid) return done({ ok: false, message: invalid });

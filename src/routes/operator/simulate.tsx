@@ -6,7 +6,7 @@ import { env } from "virtual:solid-env/client";
 import { Button } from "../../components/common/button";
 import { SectionRule } from "../../components/layout/screen";
 import { BusCard } from "../../components/operator/bus-card";
-import { PlanMap } from "../../components/operator/plan-map";
+import { PlanMap, routeColors } from "../../components/operator/plan-map";
 import {
   type NumberKey,
   type ResearchParams,
@@ -36,6 +36,7 @@ export default function OperatorSimulate() {
   const value = (key: NumberKey) => draft()[key] ?? String(plan().input[key]);
   const changed = () => Object.entries(draft()).some(([key, next]) => next !== String(plan().input[key as NumberKey]));
   const shown = createMemo(() => plan().buses.filter((bus) => !slot() || bus.slot === slot()));
+  const colors = createMemo(() => routeColors(shown()));
   const groups = createMemo(() => {
     const bySlot = new Map<string, ResearchPlan["buses"]>();
     for (const bus of shown()) bySlot.set(bus.slot, [...(bySlot.get(bus.slot) ?? []), bus]);
@@ -59,10 +60,15 @@ export default function OperatorSimulate() {
     <>
       <Title>{`모의 노선 - 운영 - ${env.VITE_APP_NAME}`}</Title>
       <Errored
-        fallback={(_, reset) => (
-          <div class="px-1">
+        fallback={(err, reset) => (
+          <div class="max-w-xl px-1">
             <h1 class="text-3xl font-bold">모의 노선</h1>
             <p class="mt-4 font-semibold">노선을 만들지 못했어요.</p>
+            <Show when={err() instanceof Error ? (err() as Error).message : String(err() ?? "")}>
+              {(detail) => (
+                <p class="mt-3 rounded-xl bg-sand-3 px-4 py-3 font-mono text-sm break-all text-sand-11">{detail()}</p>
+              )}
+            </Show>
             <button type="button" class="mt-2 cursor-pointer font-semibold text-amber-11" onClick={reset}>
               다시 만들기
             </button>
@@ -109,6 +115,20 @@ export default function OperatorSimulate() {
                 value={plan().input.demand}
                 onChange={(demand) => setParams({ demand: demand === "all" ? undefined : demand })}
               />
+            </fieldset>
+            <fieldset class="flex flex-col gap-y-1.5">
+              <legend class="mb-1.5 text-sm font-semibold text-sand-11">한산한 시간대</legend>
+              <div class="flex h-13 items-center">
+                <Check
+                  label="다음 시간대와 합치기"
+                  checked={plan().input.foldThinSlots}
+                  onChange={(on) => {
+                    setSlot(undefined);
+                    setSelected(undefined);
+                    setParams({ fold: on === plan().defaults.foldThinSlots ? undefined : on ? "1" : "0" });
+                  }}
+                />
+              </div>
             </fieldset>
           </div>
           <p class="mt-2 px-1 text-sm font-medium break-keep text-sand-11">
@@ -183,16 +203,16 @@ export default function OperatorSimulate() {
                 <SlotTab active={!slot()} onClick={() => setSlot(undefined)}>
                   모든 시간 · {plan().buses.length}대
                 </SlotTab>
-                <For each={plan().slots}>
+                <For each={plan().slots} keyed={(entry) => entry.slot}>
                   {(entry) => (
                     <SlotTab
-                      active={slot() === entry.slot}
+                      active={slot() === entry().slot}
                       onClick={() => {
                         setSelected(undefined);
-                        setSlot(entry.slot);
+                        setSlot(entry().slot);
                       }}
                     >
-                      {entry.slot} · {entry.buses}대
+                      {entry().slot} · {entry().buses}대
                     </SlotTab>
                   )}
                 </For>
@@ -200,12 +220,13 @@ export default function OperatorSimulate() {
               <PlanMap
                 buses={shown()}
                 selected={selected()}
-                class="mt-3 h-[28rem]"
+                class="mt-3 h-112"
                 label={`${slot() ?? "모든 시간"} 출발 버스 ${shown().length}대의 노선 지도`}
               />
               <p class="mt-2 px-1 text-sm font-medium break-keep text-sand-11">
-                정류장 사이는 직선으로 이었어요. 검은 점은 타는 곳, 흰 점은 내리는 곳이고 클수록 많이 내려요. 아래
-                버스를 열면 지도에서 그 버스만 노랗게 보여요.
+                정류장 사이는 직선으로 이었어요. 시간대를 고르면 버스마다 색이 달라지고, 아래 버스 카드의 색과 같아요.
+                검은 점은 타는 곳, 흰 점은 내리는 곳이고 클수록 많이 내려요. 버스를 열면 지도에서 그 버스만 노랗게
+                보여요.
               </p>
 
               <For each={groups()} keyed={(group) => group.slot}>
@@ -219,6 +240,7 @@ export default function OperatorSimulate() {
                             <BusCard
                               bus={bus()}
                               fixed={false}
+                              color={colors().get(bus().key)}
                               onToggle={(open) => {
                                 if (open) setSelected(bus().key);
                                 else if (selected() === bus().key) setSelected(undefined);

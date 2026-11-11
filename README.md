@@ -79,7 +79,7 @@ For running a night step by step (in Korean), see [docs/operator-guide.md](docs/
 
 ## Where things live
 
-- `src/server/planner/`: the route planner (sweep grouping, set-cover stops, nearest neighbor + 2-opt, small-group merging, departure adjustment). Pure TypeScript with tests.
+- `src/server/planner/`: the route planner (thin-slot folding, sweep grouping by home direction, rider trades between buses of a slot, set-cover stops refined against bus detours, nearest neighbor + 2-opt, small-group merging, departure adjustment). Pure TypeScript with tests.
 - `src/server/plans.ts`: builds, stores, and loads each night's plan.
 - `src/server/rides.ts`: what the student sees tonight, the bus options, and choosing a bus.
 - `src/server/boarding.ts` and `src/server/qr-sign.ts`: checking a scanned QR and recording the boarding; `src/lib/boarding.ts` exposes them to the reader and driver screens.

@@ -10,6 +10,10 @@ export interface PlanSettings {
   driveMetersPerMinute: number;
   dwellMinutes: number;
   mergeBearingDegrees: number;
+  walkWeight: number;
+  busStartMinutes: number;
+  lateShiftMinutes: number;
+  foldThinSlots: boolean;
 }
 
 export interface DispatchSettings {
@@ -39,6 +43,10 @@ export const PLAN_SETTINGS: PlanSettings = {
   driveMetersPerMinute: 600,
   dwellMinutes: 1,
   mergeBearingDegrees: 45,
+  walkWeight: 0.25,
+  busStartMinutes: 15,
+  lateShiftMinutes: 4,
+  foldThinSlots: true,
 };
 
 export const DISPATCH_SETTINGS: DispatchSettings = {

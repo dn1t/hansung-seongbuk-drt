@@ -6,7 +6,7 @@ import { env } from "virtual:solid-env/client";
 
 import { RouteDots, Wordmark } from "../../components/layout/screen";
 import { BarList, Columns } from "../../components/operator/bars";
-import { PlanMap } from "../../components/operator/plan-map";
+import { PlanMap, routeColors } from "../../components/operator/plan-map";
 import {
   type ResearchParams,
   researchInput,
@@ -15,6 +15,7 @@ import {
   Summary,
 } from "../../components/operator/research-view";
 import { getResearchPlan, getSurveyReport, type ResearchFilter } from "../../lib/research";
+import { formatClock } from "../../lib/time";
 
 const SLIDES = [
   "표지",
@@ -36,6 +37,8 @@ export default function Present() {
   const report = createMemo(() => getSurveyReport(filter()));
   const [index, setIndex] = createSignal(0);
   const [slot, setSlot] = createSignal<string>();
+  const mapBuses = createMemo(() => plan().buses.filter((bus) => !slot() || bus.slot === slot()));
+  const colors = createMemo(() => routeColors(mapBuses()));
 
   const go = (step: number) => setIndex((current) => Math.min(SLIDES.length - 1, Math.max(0, current + step)));
 
@@ -158,22 +161,43 @@ export default function Present() {
               <Match when={index() === 6}>
                 <Slide title="노선 지도">
                   <div class="flex min-h-0 flex-1 gap-x-8">
-                    <PlanMap
-                      buses={plan().buses.filter((bus) => !slot() || bus.slot === slot())}
-                      class="h-full flex-1"
-                      label={`${slot() ?? "모든 시간"} 출발 버스 노선 지도`}
-                    />
+                    <div class="relative min-w-0 flex-1">
+                      <PlanMap
+                        buses={mapBuses()}
+                        class="h-full"
+                        label={`${slot() ?? "모든 시간"} 출발 버스 노선 지도`}
+                      />
+                      <Show when={slot()}>
+                        <ul class="absolute bottom-4 left-4 z-10 flex flex-col gap-y-2 rounded-xl border border-sand-4 bg-sand-1 px-4 py-3">
+                          <For each={mapBuses()} keyed={(bus) => bus.key}>
+                            {(bus) => (
+                              <li class="flex items-center gap-x-3 text-lg">
+                                <span
+                                  aria-hidden="true"
+                                  class="h-1.5 w-6 shrink-0 rounded-full"
+                                  style={{ "background-color": colors().get(bus().key) }}
+                                />
+                                <span class="font-semibold">{bus().name}</span>
+                                <span class="font-medium text-sand-11 tabular-nums">
+                                  {formatClock(bus().departs)} · {bus().riders}명
+                                </span>
+                              </li>
+                            )}
+                          </For>
+                        </ul>
+                      </Show>
+                    </div>
                     <ul class="flex w-72 shrink-0 flex-col gap-y-1 overflow-y-auto">
                       <SlotRow active={!slot()} onClick={() => setSlot(undefined)}>
                         <span>모든 시간</span>
                         <span>{plan().buses.length}대</span>
                       </SlotRow>
-                      <For each={plan().slots}>
+                      <For each={plan().slots} keyed={(entry) => entry.slot}>
                         {(entry) => (
-                          <SlotRow active={slot() === entry.slot} onClick={() => setSlot(entry.slot)}>
-                            <span>{entry.slot}</span>
+                          <SlotRow active={slot() === entry().slot} onClick={() => setSlot(entry().slot)}>
+                            <span>{entry().slot}</span>
                             <span class="font-medium text-sand-11">
-                              {entry.buses}대 · {entry.riders}명
+                              {entry().buses}대 · {entry().riders}명
                             </span>
                           </SlotRow>
                         )}

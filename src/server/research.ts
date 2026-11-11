@@ -245,6 +245,7 @@ export interface ResearchPlanInput {
   maxWalkMeters: number;
   maxRideMinutes: number;
   minRiders: number;
+  foldThinSlots: boolean;
 }
 
 export interface ResearchStop {
@@ -274,7 +275,7 @@ export interface ResearchBus {
 
 export interface ResearchPlan {
   input: ResearchPlanInput;
-  defaults: Pick<ServiceSettings, "capacity" | "maxWalkMeters" | "maxRideMinutes" | "minRiders">;
+  defaults: Pick<ServiceSettings, "capacity" | "maxWalkMeters" | "maxRideMinutes" | "minRiders" | "foldThinSlots">;
   limits: typeof SERVICE_LIMITS;
   respondents: { real: number; demo: number };
   candidates: number;
@@ -291,8 +292,10 @@ export interface ResearchPlan {
     boardStops: number;
     seatShare: number;
     busMinutes: number;
+    later: number;
+    earlier: number;
   };
-  steps: { slots: number; groups: number; moved: number; merged: number };
+  steps: { slots: number; groups: number; moved: number; merged: number; waiting: number };
 }
 
 const clampTo = (value: number, limit: { min: number; max: number }, fallback: number) =>
@@ -308,6 +311,7 @@ export function normalizeInput(input: Partial<ResearchPlanInput>, service: Servi
     maxWalkMeters: clampTo(Number(input.maxWalkMeters), SERVICE_LIMITS.maxWalkMeters, service.maxWalkMeters),
     maxRideMinutes: clampTo(Number(input.maxRideMinutes), SERVICE_LIMITS.maxRideMinutes, service.maxRideMinutes),
     minRiders: Math.min(capacity, clampTo(Number(input.minRiders), SERVICE_LIMITS.minRiders, service.minRiders)),
+    foldThinSlots: typeof input.foldThinSlots === "boolean" ? input.foldThinSlots : service.foldThinSlots,
   };
 }
 
@@ -397,7 +401,12 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
   });
 
   const placed = rides.length;
-  const usedSlots = ALL_SLOTS.filter((slot) => riders.some((rider) => rider.slot === slot));
+  const askedSlots = ALL_SLOTS.filter((slot) => riders.some((rider) => rider.slot === slot));
+  const usedSlots = ALL_SLOTS.filter((slot) => buses.some((bus) => bus.slot === slot));
+  const askedOf = new Map(riders.map((rider) => [rider.id, slotIndex(rider.slot)]));
+  const shifts = result.buses.flatMap((bus) =>
+    bus.route.seats.map((seat) => slotIndex(bus.slot) - askedOf.get(seat.riderId)!),
+  );
   return {
     input,
     defaults: {
@@ -405,6 +414,7 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
       maxWalkMeters: service.maxWalkMeters,
       maxRideMinutes: service.maxRideMinutes,
       minRiders: service.minRiders,
+      foldThinSlots: service.foldThinSlots,
     },
     limits: SERVICE_LIMITS,
     respondents: { real: all.filter((row) => !row.demo).length, demo: all.filter((row) => row.demo).length },
@@ -426,7 +436,9 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
       boardStops: boardStops.size,
       seatShare: buses.length ? placed / (buses.length * settings.capacity) : 0,
       busMinutes: Math.round(buses.reduce((sum, bus) => sum + bus.duration, 0)),
+      later: shifts.filter((shift) => shift > 0).length,
+      earlier: shifts.filter((shift) => shift < 0).length,
     },
-    steps: { slots: usedSlots.length, ...result.steps },
+    steps: { slots: askedSlots.length, ...result.steps },
   };
 }

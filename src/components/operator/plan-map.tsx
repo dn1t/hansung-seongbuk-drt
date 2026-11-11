@@ -22,10 +22,17 @@ type Maps = Omit<KakaoMaps, "Polyline"> & {
   Polyline: new (options: object) => Overlay;
 };
 
-const ROUTE = "#a9a69d";
+const ROUTE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"];
+const ROUTE = ROUTE_COLORS[0];
+const CASING = "#ffffff";
 const SELECTED = "#ffc53d";
 const SELECTED_EDGE = "#ab6400";
 const INK = "#21201c";
+
+export function routeColors(buses: { key: string }[]) {
+  const many = buses.length > ROUTE_COLORS.length;
+  return new Map(buses.map((bus, i) => [bus.key, many ? ROUTE : ROUTE_COLORS[i]]));
+}
 
 export function PlanMap(props: { buses: MapBus[]; selected?: string; class?: string; label: string }) {
   let container: HTMLDivElement | undefined;
@@ -65,22 +72,26 @@ export function PlanMap(props: { buses: MapBus[]; selected?: string; class?: str
       const overlays: Overlay[] = [];
       const point = (stop: { lat: number; lng: number }) => new maps.LatLng(stop.lat, stop.lng);
       const ordered = [...buses].sort((a, b) => Number(a.key === selected) - Number(b.key === selected));
+      const colors = routeColors(buses);
 
       for (const bus of ordered) {
         const path = bus.stops.map(point);
         const isSelected = bus.key === selected;
-        if (isSelected) {
-          overlays.push(
-            new maps.Polyline({ map, path, strokeWeight: 9, strokeColor: SELECTED_EDGE, strokeOpacity: 1 }),
-          );
-        }
+        const dimmed = Boolean(selected) && !isSelected;
         overlays.push(
           new maps.Polyline({
             map,
             path,
-            strokeWeight: isSelected ? 5 : 3,
-            strokeColor: isSelected ? SELECTED : ROUTE,
-            strokeOpacity: isSelected || !selected ? 0.95 : 0.45,
+            strokeWeight: isSelected ? 10 : 8,
+            strokeColor: isSelected ? SELECTED_EDGE : CASING,
+            strokeOpacity: dimmed ? 0.4 : 1,
+          }),
+          new maps.Polyline({
+            map,
+            path,
+            strokeWeight: isSelected ? 6 : 5,
+            strokeColor: isSelected ? SELECTED : (colors.get(bus.key) ?? ROUTE),
+            strokeOpacity: dimmed ? 0.35 : 1,
           }),
         );
       }
