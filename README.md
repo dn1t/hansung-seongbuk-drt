@@ -40,6 +40,18 @@ Optional:
 
 Every external lookup falls back to a distance estimate when its key is missing or the call fails.
 
+## Deploy to Cloudflare Workers
+
+The app runs on Workers through `@cloudflare/vite-plugin` (`wrangler.jsonc`). `pnpm dev` and `pnpm serve` run the server in workerd locally; tests set `NODE_SSR=1` to keep it in Node. `pnpm start` still serves the same build on Node.
+
+1. `npx wrangler login`
+2. `pnpm cf:secrets` (add `--env .env.prod` for another file) uploads the server values as Worker secrets, creating the Worker if it doesn't exist yet. Cloudflare starts the code once on upload, and the server refuses to start without them, so they go first. `DEMO_TIME` is always left empty.
+3. `pnpm cf:deploy` builds and deploys, then prints the `*.workers.dev` address. `VITE_` values (app name, Kakao map key) are baked in at build time from `.env`.
+4. `pnpm cf:secrets --url https://<that address>` again, which sets `BASE_URL` and `TRUSTED_ORIGINS` to it. Secrets apply without a rebuild.
+5. Run `pnpm migrate` against the production database (`ENV_FILE=.env.prod pnpm migrate`), and add the address to the Kakao JavaScript key's web platform domains so the maps load.
+
+Login hashes passwords with scrypt and route planning takes tens of milliseconds, both over the Workers Free plan's 10 ms CPU limit, so use the Workers Paid plan.
+
 ## Demo
 
 Demo riders are flagged `users.demo` and every operator screen counts them apart from real students. They can also be made or cleared from /operator/survey without the script.

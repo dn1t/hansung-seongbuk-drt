@@ -1,3 +1,4 @@
+import { cloudflare } from "@cloudflare/vite-plugin";
 import solid from "@solidjs/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { fileRoutes } from "filesystem-routing/vite";
@@ -8,6 +9,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
+    process.env.NODE_SSR ? [] : cloudflare({ viteEnvironment: { name: "ssr" } }),
     solid({
       start: {
         middleware: "./src/middleware.ts",
@@ -31,6 +33,9 @@ export default defineConfig({
     icons({ compiler: "solid" }),
   ],
   server: { port: 3000 },
+  environments: process.env.NODE_SSR
+    ? { ssr: { build: { rolldownOptions: { external: ["cloudflare:workers"] } } } }
+    : undefined,
   build: {
     target: "esnext",
     assetsInlineLimit: 0,

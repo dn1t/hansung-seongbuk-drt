@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { createSignal, For, Show, untrack } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 
 import type { SurveyForm as SurveyFormData } from "../../lib/survey";
 import {
@@ -25,17 +25,19 @@ export function SurveyForm(props: {
   aboveTabBar?: boolean;
   onSave: (answers: SurveyAnswers) => Promise<void>;
 }) {
-  const { answers: initial, slots, starts } = untrack(() => props.form);
-  const [frequency, setFrequency] = createSignal<SurveyFrequency | undefined>(initial?.frequency);
-  const [slot, setSlot] = createSignal<string | undefined>(
-    initial && slots.includes(initial.slot) ? initial.slot : undefined,
-  );
-  const [startId, setStartId] = createSignal(
-    starts.find((start) => start.id === initial?.startId)?.id ?? starts[0]?.id ?? "",
-  );
-  const [way, setWay] = createSignal<SurveyWay | undefined>(initial?.way);
-  const [fare, setFare] = createSignal<SurveyFare | undefined>(initial?.fare);
-  const [comment, setComment] = createSignal(initial?.comment ?? "");
+  const saved = () => props.form.answers;
+  const [frequency, setFrequency] = createSignal<SurveyFrequency | undefined>(() => saved()?.frequency);
+  const [slot, setSlot] = createSignal<string | undefined>(() => {
+    const answer = saved()?.slot;
+    return answer && props.form.slots.includes(answer) ? answer : undefined;
+  });
+  const [startId, setStartId] = createSignal(() => {
+    const starts = props.form.starts;
+    return starts.find((start) => start.id === saved()?.startId)?.id ?? starts[0]?.id ?? "";
+  });
+  const [way, setWay] = createSignal<SurveyWay | undefined>(() => saved()?.way);
+  const [fare, setFare] = createSignal<SurveyFare | undefined>(() => saved()?.fare);
+  const [comment, setComment] = createSignal(() => saved()?.comment ?? "");
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal("");
 

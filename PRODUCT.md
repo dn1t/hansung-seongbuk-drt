@@ -98,6 +98,7 @@ Bottom tab bar: 오늘 귀가 (tonight's ride), 사전 신청 (advance booking),
 ### Stack
 
 - Solid 2.0 RC with pinned package versions, using its built-in start/server features through `@solidjs/vite-plugin` (not SolidStart). Also `@solidjs/router`, Better Auth (email OTP + email/password), Drizzle ORM on libSQL/Turso, Tailwind CSS 4, and Mailgun for email.
+- Deployed on Cloudflare Workers through `@cloudflare/vite-plugin` (`pnpm cf:deploy`, secrets via `pnpm cf:secrets`). Email goes through the Mailgun HTTP API with `fetch`; background work after a response (warming walk times) is kept alive with `waitUntil`.
 - Kakao is used for map and place features: Map Web (JavaScript) SDK with the JavaScript key (walk map and route map), Local API keyword search for stops and starting points, Local API address-to-coordinates for home addresses, and optionally the Kakao Mobility directions API for bus travel times. Walking routes come from SK TMAP, since Kakao has no public walking API. Naver Directions is ruled out because it has no walking routes. The free Kakao quota covers only the first app activated per developer account, so the team shares one account and key.
 - The browser camera for the QR reader only works over HTTPS.
 - Mobile-first web app: content is held to a max width of `max-w-xl`, the document is `lang="ko"`, and the interface is Korean only.

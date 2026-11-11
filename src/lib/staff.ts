@@ -38,8 +38,9 @@ function sameText(a: string, b: string) {
 }
 
 function clientKey(event: StartRequestEvent) {
-  const forwarded = event.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || event.request.headers.get("x-real-ip") || "local";
+  const headers = event.request.headers;
+  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return headers.get("cf-connecting-ip") || forwarded || headers.get("x-real-ip") || "local";
 }
 
 function isSecure(event: StartRequestEvent) {

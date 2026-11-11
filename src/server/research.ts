@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, or } from "drizzle-orm";
 
 import { surveys } from "../lib/app-schema";
 import { db } from "../lib/db";
@@ -102,6 +102,7 @@ export async function loadRespondents(): Promise<Respondent[]> {
     .where(and(isNotNull(users.homeLat), isNotNull(users.homeLng)));
   return rows.map((row) => ({
     ...row,
+    demo: row.demo === true,
     lat: Number(row.lat),
     lng: Number(row.lng),
     createdAt: row.createdAt.getTime(),
@@ -147,7 +148,7 @@ export async function surveyReport(filter: ResearchFilter): Promise<SurveyReport
       .select({ id: users.id })
       .from(users)
       .leftJoin(surveys, eq(surveys.userId, users.id))
-      .where(and(isNotNull(users.homeAddress), eq(users.demo, false), isNull(surveys.userId))),
+      .where(and(isNotNull(users.homeAddress), or(isNull(users.demo), eq(users.demo, false)), isNull(surveys.userId))),
   ]);
   const rows = all.filter(inFilter(filter));
   const schoolNames = Object.values(SCHOOLS) as string[];

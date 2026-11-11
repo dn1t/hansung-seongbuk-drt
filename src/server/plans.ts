@@ -14,6 +14,7 @@ import {
 import { db } from "../lib/db";
 import { users } from "../lib/schema";
 import { schoolOf } from "../lib/schools";
+import { inBackground } from "./background";
 import { ALL_SLOTS, kstToday, nightClock, serviceNow, slotIndex } from "./clock";
 import { boardingPlace, startOfSchool } from "./places";
 import { adjustDepartures } from "./planner/dispatch";
@@ -195,7 +196,7 @@ async function writePlan(night: string, preview: PlanPreview, replace: boolean) 
       return home ? [[bus.route.stops[seat.alight].place, home] as [Place, { lat: number; lng: number }]] : [];
     }),
   );
-  void warmWalkTimes(walks).catch((err) => console.error("warmWalkTimes:", err));
+  inBackground("warmWalkTimes", warmWalkTimes(walks));
 }
 
 function isConflict(err: unknown) {

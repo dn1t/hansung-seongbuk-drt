@@ -242,7 +242,7 @@ async function announceRecipients() {
       and(
         isNotNull(users.homeAddress),
         eq(users.emailVerified, true),
-        eq(users.demo, false),
+        or(isNull(users.demo), eq(users.demo, false)),
         or(isNull(emailPrefs.bookingOpen), eq(emailPrefs.bookingOpen, true)),
       ),
     );

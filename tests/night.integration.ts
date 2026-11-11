@@ -29,6 +29,7 @@ Object.assign(process.env, {
   ROUTE_TIMES: "estimate",
   WALK_TIMES: "estimate",
   DEMO_TIME: "22:00",
+  NODE_SSR: "1",
 });
 
 let vite: ViteDevServer;
