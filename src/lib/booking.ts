@@ -2,8 +2,11 @@ import { query } from "@solidjs/router";
 import { respond } from "@solidjs/web";
 import { and, asc, eq, gt, gte } from "drizzle-orm";
 
+import { cancelBookingFor } from "../server/cancel";
+import { kstToday } from "../server/clock";
 import { searchKakaoAddress } from "../server/kakao";
-import { BOOKING_SLOTS, kstToday } from "../server/sample-calendar";
+import { bookingBlock } from "../server/no-show";
+import { serviceSlots } from "../server/service";
 import { ADDRESS_DETAIL_MAX_LENGTH } from "./address";
 import { bookings, operatingNights } from "./app-schema";
 import { db } from "./db";
@@ -17,6 +20,7 @@ export interface Booking {
   address: string;
   addressDetail: string | null;
   isHome: boolean;
+  locked: boolean;
 }
 
 export interface BookingOverview {
@@ -24,6 +28,7 @@ export interface BookingOverview {
   slots: string[];
   bookings: Booking[];
   home: { address: string; detail: string | null } | null;
+  blocked?: string;
 }
 
 export type BookingResult = { ok: true; count: number } | { ok: false; message: string };
@@ -34,7 +39,6 @@ export type BookingAddressChoice =
   | { kind: "other"; address: string; detail: string };
 
 async function openNights() {
-  "use server";
   const rows = await db
     .select({ night: operatingNights.night })
     .from(operatingNights)
@@ -48,7 +52,6 @@ type PlaceLookup =
   | { ok: false; message: string };
 
 async function placeOf(address: string, detail: string): Promise<PlaceLookup> {
-  "use server";
   address = address.trim();
   detail = detail.trim();
   if (detail.length > ADDRESS_DETAIL_MAX_LENGTH) {
@@ -61,7 +64,6 @@ async function placeOf(address: string, detail: string): Promise<PlaceLookup> {
 }
 
 async function homeOf(userId: string) {
-  "use server";
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user?.homeAddress || user.homeLat === null || user.homeLng === null) return null;
   return { address: user.homeAddress, detail: user.homeAddressDetail, lat: user.homeLat, lng: user.homeLng };
@@ -71,17 +73,20 @@ export const getBookingOverview = query(async (): Promise<BookingOverview> => {
   "use server";
   const userId = await requireUserId();
   const home = await homeOf(userId);
-  const [rows, nights] = await Promise.all([
+  const [rows, nights, slots, blocked] = await Promise.all([
     db
       .select()
       .from(bookings)
       .where(and(eq(bookings.userId, userId), gte(bookings.night, kstToday())))
       .orderBy(asc(bookings.night)),
     openNights(),
+    serviceSlots(),
+    bookingBlock(userId),
   ]);
   return {
+    blocked,
     nights,
-    slots: BOOKING_SLOTS,
+    slots,
     bookings: rows.map((row) => ({
       id: row.id,
       night: row.night,
@@ -89,6 +94,7 @@ export const getBookingOverview = query(async (): Promise<BookingOverview> => {
       address: row.address,
       addressDetail: row.addressDetail,
       isHome: row.address === home?.address && row.addressDetail === home?.detail,
+      locked: row.night <= kstToday(),
     })),
     home: home && { address: home.address, detail: home.detail },
   };
@@ -104,12 +110,15 @@ export async function createBookings(input: {
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });
 
+  const blocked = await bookingBlock(userId);
+  if (blocked) return done({ ok: false, message: blocked });
+
   const open = new Set(await openNights());
   const nights = [...new Set(input.nights)];
   if (nights.length === 0 || nights.some((night) => !open.has(night))) {
     return done({ ok: false, message: "신청할 수 없는 날이 섞여 있어요. 날짜를 다시 골라 주세요." });
   }
-  if (!BOOKING_SLOTS.includes(input.slot)) {
+  if (!(await serviceSlots()).includes(input.slot)) {
     return done({ ok: false, message: "시간을 다시 골라 주세요." });
   }
 
@@ -153,7 +162,7 @@ export async function updateBooking(input: {
   const done = (result: BookingResult) => respond(result, { revalidate: [getBookingOverview.key] });
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });
-  if (!BOOKING_SLOTS.includes(input.slot)) return done({ ok: false, message: "시간을 다시 골라 주세요." });
+  if (!(await serviceSlots()).includes(input.slot)) return done({ ok: false, message: "시간을 다시 골라 주세요." });
 
   try {
     const [booking] = await db
@@ -195,11 +204,7 @@ export async function cancelBooking(id: string): Promise<BookingResult> {
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });
   try {
-    const removed = await db
-      .delete(bookings)
-      .where(and(eq(bookings.id, id), eq(bookings.userId, userId)))
-      .returning({ id: bookings.id });
-    if (removed.length === 0) return done({ ok: false, message: "이미 취소된 신청이에요." });
+    if (!(await cancelBookingFor(userId, String(id)))) return done({ ok: false, message: "이미 취소된 신청이에요." });
     return done({ ok: true, count: 1 });
   } catch (err) {
     console.error("cancelBooking:", err);

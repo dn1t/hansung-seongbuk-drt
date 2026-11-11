@@ -5,7 +5,6 @@ import { env } from "virtual:solid-env/client";
 
 import { OptionCard } from "../../../components/common/option-card";
 import { Footer, Header } from "../../../components/layout/screen";
-import { SampleBadge } from "../../../components/ride/badges";
 import { busTitle } from "../../../components/ride/bus-detail";
 import { chooseRide, getBusDetail, getTonight } from "../../../lib/ride";
 import { FLOW_TOTAL_STEPS, flowHref } from "../../../lib/ride-flow";
@@ -64,9 +63,8 @@ export default function TodayDropOff() {
       <Loading fallback={<div class="flex-1" />}>
         <Show when={data()}>
           {(detail) => (
-            <div class="mt-4 flex items-center justify-between gap-x-3 px-1">
+            <div class="mt-4 flex items-center px-1">
               <span class="text-sm font-semibold break-keep text-sand-11">{busTitle(detail().option)}</span>
-              <SampleBadge />
             </div>
           )}
         </Show>

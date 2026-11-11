@@ -18,6 +18,7 @@ export const users = sqliteTable("users", {
   homeAddressDetail: text("home_address_detail"),
   homeLat: integer("home_lat"),
   homeLng: integer("home_lng"),
+  demo: integer("demo", { mode: "boolean" }).default(false).notNull(),
 });
 
 export const sessions = sqliteTable(

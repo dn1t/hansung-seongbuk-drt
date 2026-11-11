@@ -60,3 +60,37 @@ export async function searchKakaoKeyword(query: string): Promise<AddressResult[]
     lng: Number(doc.x),
   }));
 }
+
+const DIRECTIONS_URL = "https://apis-navi.kakaomobility.com/v1/waypoints/directions";
+export const DIRECTIONS_MAX_POINTS = 32;
+
+interface KakaoSection {
+  distance: number;
+  duration: number;
+}
+
+interface KakaoDirections {
+  routes: { result_code: number; result_msg: string; sections?: KakaoSection[] }[];
+}
+
+export async function kakaoDriveSections(points: { lat: number; lng: number }[]) {
+  if (points.length < 2 || points.length > DIRECTIONS_MAX_POINTS) throw new Error("kakao directions: bad point count");
+  const at = (p: { lat: number; lng: number }) => ({ x: String(p.lng), y: String(p.lat) });
+  const res = await fetch(DIRECTIONS_URL, {
+    method: "POST",
+    headers: { Authorization: `KakaoAK ${env.KAKAO_REST_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: at(points[0]),
+      destination: at(points.at(-1)!),
+      waypoints: points.slice(1, -1).map(at),
+      priority: "RECOMMEND",
+      summary: false,
+    }),
+  });
+  if (!res.ok) throw new Error(`kakao directions failed: ${res.status} ${await res.text()}`);
+  const route = ((await res.json()) as KakaoDirections).routes[0];
+  if (!route || route.result_code !== 0 || route.sections?.length !== points.length - 1) {
+    throw new Error(`kakao directions: ${route?.result_code} ${route?.result_msg}`);
+  }
+  return route.sections.map((section) => ({ seconds: section.duration, meters: section.distance }));
+}

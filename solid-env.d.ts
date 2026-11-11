@@ -30,6 +30,10 @@ declare module 'virtual:solid-env/server' {
     readonly "MAILGUN_DOMAIN": __Out<__Schema["server"]["MAILGUN_DOMAIN"]>;
     readonly "KAKAO_REST_API_KEY": __Out<__Schema["server"]["KAKAO_REST_API_KEY"]>;
     readonly "STAFF_CODE": __Out<__Schema["server"]["STAFF_CODE"]>;
+    readonly "ROUTE_TIMES": __Out<__Schema["server"]["ROUTE_TIMES"]>;
+    readonly "WALK_TIMES": __Out<__Schema["server"]["WALK_TIMES"]>;
+    readonly "TMAP_APP_KEY": __Out<__Schema["server"]["TMAP_APP_KEY"]>;
+    readonly "DEMO_TIME": __Out<__Schema["server"]["DEMO_TIME"]>;
     readonly "VITE_APP_NAME": __Out<__Schema["client"]["VITE_APP_NAME"]>;
     readonly "VITE_KAKAO_JS_KEY": __Out<__Schema["client"]["VITE_KAKAO_JS_KEY"]>;
   };

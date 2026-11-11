@@ -5,21 +5,23 @@ import { env } from "virtual:solid-env/client";
 
 import { Button } from "../../../components/common/button";
 import { Input } from "../../../components/common/input";
-import { ActionRow, LinkRow, SavedNotice } from "../../../components/common/list-row";
+import { ActionRow, LinkRow, SavedNotice, ToggleRow } from "../../../components/common/list-row";
 import { Sheet } from "../../../components/common/sheet";
 import { authClient } from "../../../lib/auth-client";
-import { getProfile } from "../../../lib/profile";
+import { getProfile, setBookingMail } from "../../../lib/profile";
 
 const SAVED_NOTICES: Record<string, string> = {
   name: "이름을 바꿨어요.",
   address: "집 주소를 바꿨어요.",
   password: "비밀번호를 바꿨어요.",
+  survey: "이용 계획을 바꿨어요.",
 };
 
 export default function Me() {
   const nav = useNavigate();
   const [params] = useSearchParams<{ saved?: string }>();
   const profile = createMemo(() => getProfile());
+  const [mail, setMail] = createSignal<boolean>();
   const [deleting, setDeleting] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const [password, setPassword] = createSignal("");
@@ -83,7 +85,19 @@ export default function Me() {
               value={profile().homeAddress ?? "정하지 않음"}
               divided
             />
+            <LinkRow href="/me/survey" icon={<PhClipboardTextBold />} title="이용 계획" divided />
             <LinkRow href="/me/password" icon={<PhLockSimpleBold />} title="비밀번호 바꾸기" divided />
+            <LinkRow href="/me/rides" icon={<PhReceiptBold />} title="탑승 기록" divided />
+            <ToggleRow
+              icon={<PhEnvelopeSimpleBold />}
+              title="신청 기간 알림 메일"
+              checked={mail() ?? profile().bookingMail}
+              divided
+              onChange={(next) => {
+                setMail(next);
+                setBookingMail(next).catch(() => setMail(!next));
+              }}
+            />
           </ul>
           <ul class="mt-3 overflow-hidden rounded-2xl bg-sand-2">
             <ActionRow icon={<PhSignOutBold />} title="로그아웃" onClick={() => void signOut()} />

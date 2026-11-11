@@ -1,35 +1,43 @@
 import { Title } from "@solidjs/meta";
-import { useNavigate, useSearchParams } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import type { JSX } from "@solidjs/web";
-import { createMemo, Errored, Loading, Match, Show, Switch } from "solid-js";
+import { createMemo, createSignal, Errored, For, Loading, Match, onSettled, Show, Switch } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
 import { Footer, RouteDots } from "../../components/layout/screen";
-import { RouteChip, SampleBadge, SeatCount } from "../../components/ride/badges";
+import { RouteChip, SeatCount } from "../../components/ride/badges";
 import { createTickingNow } from "../../components/ride/clock";
 import { RouteTimeline, ridingRows, tripRows } from "../../components/ride/route-timeline";
 import { TimeLegs } from "../../components/ride/time-legs";
-import { getTonight, type RideState, type Tonight } from "../../lib/ride";
+import { getTonight, refreshTonight, type RideState, type Tonight } from "../../lib/ride";
 import { flowHref } from "../../lib/ride-flow";
-import { formatClock, formatMinutes, minutesBetween, withDirectionParticle } from "../../lib/time";
+import { formatClock, formatMinutes, formatNight, minutesBetween, withDirectionParticle } from "../../lib/time";
 
 type StateOf<K extends Tonight["kind"]> = Extract<Tonight, { kind: K }>;
 
 export default function Home() {
   const nav = useNavigate();
-  const [params] = useSearchParams<{ demo?: string }>();
-  const tonight = createMemo(() => getTonight(params.demo ?? ""));
+  const tonight = createMemo(() => getTonight());
+  const [latest, setLatest] = createSignal<Tonight>();
   const stateOf = <K extends Tonight["kind"]>(kind: K) => {
-    const current = tonight();
+    const current = latest() ?? tonight();
     return current.kind === kind ? (current as StateOf<K>) : undefined;
   };
+
+  onSettled(() => {
+    const timer = setInterval(() => {
+      refreshTonight()
+        .then((next) => setLatest(next))
+        .catch(() => undefined);
+    }, 60_000);
+    return () => clearInterval(timer);
+  });
 
   return (
     <div class="flex flex-1 flex-col px-5 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <Title>{`오늘 귀가 - ${env.VITE_APP_NAME}`}</Title>
       <div class="mt-8 flex h-7 items-center justify-between px-1">
         <h1 class="text-xl font-bold">오늘 귀가</h1>
-        <SampleBadge />
       </div>
       <Errored
         fallback={(_, reset) => (
@@ -44,12 +52,49 @@ export default function Home() {
         <Loading fallback={<div class="flex-1" />}>
           <Switch>
             <Match when={stateOf("no-service")}>
-              <Card>
-                <p class="text-xl font-bold">오늘은 운행하지 않아요</p>
-                <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
-                  시험기간과 축제기간에만 운행해요. 신청 기간이 열리면 학교 이메일로 알려 드려요.
-                </p>
-              </Card>
+              {(state) => (
+                <Show
+                  when={state().upcoming.length > 0}
+                  fallback={
+                    <Card>
+                      <p class="text-xl font-bold">오늘은 운행하지 않아요</p>
+                      <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
+                        시험기간과 축제기간에만 운행해요. 신청 기간이 열리면 학교 이메일로 알려 드려요.
+                      </p>
+                    </Card>
+                  }
+                >
+                  <Card flush>
+                    <div class="px-5 py-5">
+                      <p class="text-xl font-bold">오늘은 운행하지 않아요</p>
+                      <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
+                        다음 운행은 {formatNight(state().upcoming[0].night)} 밤이에요.
+                      </p>
+                    </div>
+                    <ul class="border-t border-sand-4 px-5 py-2">
+                      <For each={state().upcoming} keyed={(item) => item.night}>
+                        {(item) => (
+                          <li class="flex items-center justify-between gap-x-3 py-1.5">
+                            <span class="font-semibold tabular-nums">{formatNight(item().night)}</span>
+                            <span class={["text-sm font-semibold", item().booked ? "text-amber-11" : "text-sand-11"]}>
+                              {item().booked ? "신청했어요" : "신청 전"}
+                            </span>
+                          </li>
+                        )}
+                      </For>
+                      <Show when={state().more > 0}>
+                        <li class="py-1.5 text-sm font-medium text-sand-11 tabular-nums">
+                          {`그 뒤로 ${state().more}일 더 운행해요`}
+                        </li>
+                      </Show>
+                    </ul>
+                  </Card>
+                  <a href="/booking" class="mt-4 flex w-max items-center gap-x-0.5 px-1 font-semibold">
+                    사전 신청으로 가기
+                    <PhCaretRightBold aria-hidden="true" class="text-sm text-sand-11" />
+                  </a>
+                </Show>
+              )}
             </Match>
             <Match when={stateOf("not-booked")}>
               <Card>
@@ -75,15 +120,19 @@ export default function Home() {
                         버스를 고르지 않아도 내 QR로 탈 수 있어요.
                       </p>
                     </div>
-                    <dl class="flex flex-col gap-y-0.5 border-t border-sand-4 px-5 py-3.5">
-                      <dt class="text-sm font-medium text-sand-11">집에서 가까운 정류장</dt>
-                      <dd class="flex flex-wrap items-baseline gap-x-1.5 font-semibold break-keep">
-                        {state().dropOff.name}
-                        <span class="text-sm font-medium whitespace-nowrap text-sand-11 tabular-nums">
-                          걸어서 {state().dropOff.walkHome}분
-                        </span>
-                      </dd>
-                    </dl>
+                    <Show when={state().dropOff}>
+                      {(dropOff) => (
+                        <dl class="flex flex-col gap-y-0.5 border-t border-sand-4 px-5 py-3.5">
+                          <dt class="text-sm font-medium text-sand-11">집에서 가까운 정류장</dt>
+                          <dd class="flex flex-wrap items-baseline gap-x-1.5 font-semibold break-keep">
+                            {dropOff().name}
+                            <span class="text-sm font-medium whitespace-nowrap text-sand-11 tabular-nums">
+                              걸어서 {dropOff().walkHome}분
+                            </span>
+                          </dd>
+                        </dl>
+                      )}
+                    </Show>
                   </Card>
                   <p class="mt-4 px-1 text-sm font-medium text-balance break-keep text-sand-11">
                     당일 신청은 선택이에요. 출발할 곳과 시간, 내릴 정류장을 직접 고를 수 있어요.
@@ -98,6 +147,31 @@ export default function Home() {
               )}
             </Match>
             <Match when={stateOf("waiting")}>{(state) => <WaitingCard state={state()} />}</Match>
+            <Match when={stateOf("missed")}>
+              {(state) => (
+                <>
+                  <Card>
+                    <div class="flex items-center gap-x-2">
+                      <RouteChip name={state().ride.routeName} quiet />
+                      <span class="text-sm font-semibold text-sand-11 tabular-nums">
+                        {formatClock(state().ride.stops[state().ride.boardIndex].at)} 승차
+                      </span>
+                    </div>
+                    <p class="mt-4 text-xl font-bold text-balance break-keep">고른 버스가 떠났어요</p>
+                    <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
+                      {state().ride.stops[state().ride.boardIndex].name}에서 타기로 했던 버스예요. 다른 버스를 고르거나,
+                      오는 버스에 내 QR을 보여 주고 타요.
+                    </p>
+                  </Card>
+                  <Footer
+                    type="button"
+                    buttonLabel="다른 버스 고르기"
+                    aboveTabBar
+                    onClick={() => nav(flowHref("/today/time", { start: state().resume.start }))}
+                  />
+                </>
+              )}
+            </Match>
             <Match when={stateOf("riding")}>{(state) => <RidingCard state={state()} />}</Match>
             <Match when={stateOf("arrived")}>
               {(state) => (

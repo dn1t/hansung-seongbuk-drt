@@ -5,7 +5,6 @@ import { env } from "virtual:solid-env/client";
 
 import { SlotGrid } from "../../../../components/booking/slot-grid";
 import { Footer, Header } from "../../../../components/layout/screen";
-import { SampleBadge } from "../../../../components/ride/badges";
 import { getBookingOverview } from "../../../../lib/booking";
 import { BOOKING_TOTAL_STEPS, nightsSummary, parseNights } from "../../../../lib/booking-flow";
 import { flowHref } from "../../../../lib/ride-flow";
@@ -34,7 +33,6 @@ export default function BookingTime() {
       <Loading fallback={<div class="flex-1" />}>
         <div class="mt-4 flex items-center justify-between gap-x-3 px-1">
           <span class="text-sm font-semibold text-sand-11 tabular-nums">{nightsSummary(nights(), formatNight)} 밤</span>
-          <SampleBadge />
         </div>
         <div class="mt-3">
           <SlotGrid slots={overview().slots} selected={selected()} onSelect={setPicked} />

@@ -8,21 +8,28 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const PhArrowLeftBold: typeof import('~icons/ph/arrow-left-bold').default
   const PhArrowRightBold: typeof import('~icons/ph/arrow-right-bold').default
   const PhArrowUpRightBold: typeof import('~icons/ph/arrow-up-right-bold').default
   const PhCalendarBlank: typeof import('~icons/ph/calendar-blank').default
   const PhCalendarBlankBold: typeof import('~icons/ph/calendar-blank-bold').default
   const PhCalendarBlankFill: typeof import('~icons/ph/calendar-blank-fill').default
+  const PhCameraBold: typeof import('~icons/ph/camera-bold').default
   const PhCaretDownBold: typeof import('~icons/ph/caret-down-bold').default
   const PhCaretLeft: typeof import('~icons/ph/caret-left').default
   const PhCaretLeftBold: typeof import('~icons/ph/caret-left-bold').default
   const PhCaretRightBold: typeof import('~icons/ph/caret-right-bold').default
+  const PhChartBarBold: typeof import('~icons/ph/chart-bar-bold').default
   const PhCheck: typeof import('~icons/ph/check').default
   const PhCheckCircle: typeof import('~icons/ph/check-circle').default
+  const PhCheckCircleFill: typeof import('~icons/ph/check-circle-fill').default
   const PhCircleNotch: typeof import('~icons/ph/circle-notch').default
   const PhCircleNotchBold: typeof import('~icons/ph/circle-notch-bold').default
+  const PhClipboardTextBold: typeof import('~icons/ph/clipboard-text-bold').default
   const PhClockBold: typeof import('~icons/ph/clock-bold').default
   const PhClockCounterClockwiseBold: typeof import('~icons/ph/clock-counter-clockwise-bold').default
+  const PhEnvelopeSimpleBold: typeof import('~icons/ph/envelope-simple-bold').default
+  const PhFlagBold: typeof import('~icons/ph/flag-bold').default
   const PhHouseBold: typeof import('~icons/ph/house-bold').default
   const PhHouseFill: typeof import('~icons/ph/house-fill').default
   const PhLockSimple: typeof import('~icons/ph/lock-simple').default
@@ -32,11 +39,17 @@ declare global {
   const PhMoon: typeof import('~icons/ph/moon').default
   const PhMoonFill: typeof import('~icons/ph/moon-fill').default
   const PhNavigationArrowBold: typeof import('~icons/ph/navigation-arrow-bold').default
+  const PhPathBold: typeof import('~icons/ph/path-bold').default
   const PhPersonSimpleWalkBold: typeof import('~icons/ph/person-simple-walk-bold').default
+  const PhPresentationChartBold: typeof import('~icons/ph/presentation-chart-bold').default
   const PhQrCode: typeof import('~icons/ph/qr-code').default
+  const PhQrCodeBold: typeof import('~icons/ph/qr-code-bold').default
   const PhQrCodeFill: typeof import('~icons/ph/qr-code-fill').default
+  const PhReceiptBold: typeof import('~icons/ph/receipt-bold').default
   const PhSearch: typeof import('~icons/ph/search').default
   const PhSignOutBold: typeof import('~icons/ph/sign-out-bold').default
+  const PhSlidersHorizontalBold: typeof import('~icons/ph/sliders-horizontal-bold').default
+  const PhSteeringWheelBold: typeof import('~icons/ph/steering-wheel-bold').default
   const PhUser: typeof import('~icons/ph/user').default
   const PhUserBold: typeof import('~icons/ph/user-bold').default
   const PhUserFill: typeof import('~icons/ph/user-fill').default
@@ -44,5 +57,7 @@ declare global {
   const PhUsersBold: typeof import('~icons/ph/users-bold').default
   const PhWarningCircle: typeof import('~icons/ph/warning-circle').default
   const PhX: typeof import('~icons/ph/x').default
+  const PhXBold: typeof import('~icons/ph/x-bold').default
   const PhXCircleBold: typeof import('~icons/ph/x-circle-bold').default
+  const PhXCircleFill: typeof import('~icons/ph/x-circle-fill').default
 }

@@ -4,7 +4,6 @@ import { createMemo, createSignal, For, Loading, Show } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
 import { Footer, Header } from "../../../components/layout/screen";
-import { SampleBadge } from "../../../components/ride/badges";
 import { getTimeSlots } from "../../../lib/ride";
 import { FLOW_TOTAL_STEPS, flowHref } from "../../../lib/ride-flow";
 import { formatClock } from "../../../lib/time";
@@ -94,7 +93,10 @@ export default function TodayTime() {
         </ul>
         <div class="mt-4 flex items-center justify-between gap-x-3 px-1">
           <p class="font-medium text-sand-11 tabular-nums">
-            <Show when={label()} fallback="시간대를 골라 주세요.">
+            <Show
+              when={label()}
+              fallback={data().slots.length > 0 ? "시간대를 골라 주세요." : "오늘 밤 남은 시간대가 없어요."}
+            >
               {(text) => (
                 <>
                   <span class="font-bold text-sand-12">{text()}</span> 사이에 타요
@@ -102,7 +104,6 @@ export default function TodayTime() {
               )}
             </Show>
           </p>
-          <SampleBadge />
         </div>
         <Footer
           type="button"

@@ -26,7 +26,8 @@ export default function BookingTab() {
         <h1 class="text-xl font-bold">사전 신청</h1>
       </div>
       <p class="mt-2 px-1 font-medium text-balance break-keep text-sand-11">
-        운행일 밤에 탈 시간을 미리 신청하면, 신청한 학생들의 집 방향으로 그날 노선이 생겨요.
+        운행일 밤에 탈 시간을 미리 신청하면, 신청한 학생들의 집 방향으로 그날 노선이 생겨요. 신청과 변경은 운행일 전날
+        밤 12시에 마감돼요.
       </p>
       <Errored
         fallback={(_, reset) => (
@@ -54,6 +55,14 @@ export default function BookingTab() {
               </span>
             </Show>
           </div>
+          <Show when={overview().blocked}>
+            {(reason) => (
+              <p class="mt-3 flex items-start gap-x-1.5 px-1 text-sm font-semibold break-keep text-red-11">
+                <PhWarningCircle aria-hidden="true" class="mt-0.75 shrink-0" />
+                {reason()}
+              </p>
+            )}
+          </Show>
           <SavedNotice message={savedNotice(params.saved, params.count)} class="mt-4" />
           <SectionRule title="내 신청" class="mt-8" />
           <Show
@@ -85,7 +94,7 @@ export default function BookingTab() {
             type="button"
             buttonLabel="새로 신청하기"
             aboveTabBar
-            variant={overview().nights.length > 0 ? "primary" : "disabled"}
+            variant={overview().nights.length > 0 && !overview().blocked ? "primary" : "disabled"}
             onClick={() => nav("/booking/new")}
           />
         </Loading>

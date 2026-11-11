@@ -12,11 +12,11 @@ web
 
 Who can sign up: students with a verified school email from 고려대학교, 국민대학교, 동덕여자대학교, 서경대학교, 성신여자대학교, 한국예술종합학교, 한성대학교, 동방문화대학원대학교 (`src/lib/schools.ts`).
 
-**Operator (secondary).** Data entry only, such as operating days and stops. The system builds routes, bus counts, timetables, and day-of dispatch changes automatically. The plan's demand map, route confirmation, dispatch, and live-status screens are **not** in scope.
+**Operator (secondary).** Data entry, such as operating days and stops, plus sending the booking-open email. Before service starts, the operator also reads the signup survey (가입 조사) and presents routes built from it (모의 노선 and its full-screen 발표 화면) to the supervising professor. The system builds routes, bus counts, timetables, and day-of dispatch changes automatically; the operator can only look at the result (a read-only 노선 view) and rebuild a night before anyone has chosen or boarded a bus. A demand map, manual route editing, manual dispatch, and live bus tracking are **not** in scope.
 
-**Driver.** One sample mockup page showing the route and the list of upcoming drop-off stops. It is not a working driver tool.
+**Driver.** One page (/operator/driver) showing a bus's route and how many boarded riders get off at each stop, refreshed every 10 seconds. It is a demo, not a real driver tool: there is no GPS, so the next stop comes from the timetable.
 
-**QR reader (demo phone).** A web page opened on a demo phone that scans a student's QR code with the camera and shows "can board" or "not a student". It only has to work; its UI is not a priority.
+**QR reader (demo phone).** A web page (/operator/reader) opened on a demo phone that scans a student's QR code with the camera and shows "can board" or "not a student". It only has to work; its UI is not a priority.
 
 ## Product Purpose
 
@@ -33,9 +33,10 @@ The route doesn't exist until students book: each operating day's routes, bus co
 ### Before the operating day
 
 1. When a booking period opens, the system emails signed-up students. There is no web push.
-2. Signup: school email → 6-digit email code (10-minute expiry) → name and password → home address. The student gets an app ID, and a personal QR code holds that ID.
-3. Advance booking: the student picks the date(s) and time they want to ride. The home address saved at signup is the default and can be changed per booking.
-4. The system fixes each date's routes, bus count, and timetable from the bookings. Routes never change on the day itself.
+2. Signup: school email (with consent to collecting and using personal data) → 6-digit email code (10-minute expiry) → name and password → home address → 이용 계획 survey. The student gets an app ID, and a personal QR code holds that ID.
+3. The 이용 계획 survey replaces the earlier Google Forms pre-survey: how often they would ride in exam and festival periods, the 30-minute slot they usually head home, where they usually start (their school by default, or a nightlife area), how they get home after the last train today, the most they would pay per ride, and an optional comment. Answers live in `surveys`, can be changed in 내 정보 → 이용 계획, and a signed-up student who hasn't answered is asked once on their next visit.
+4. Advance booking: the student picks the date(s) and time they want to ride. The home address saved at signup is the default and can be changed per booking.
+5. The system fixes each date's routes, bus count, and timetable from the bookings. Routes never change on the day itself.
 
 ### On the operating day
 
@@ -47,7 +48,7 @@ The route doesn't exist until students book: each operating day's routes, bus co
 
 1. The student scans their QR code at the bus reader. This checks that they're a student, records the boarding, and adds their drop-off stop to the driver's screen.
 2. The bus follows its fixed route and stops only where riders are getting off.
-3. Boarding records feed into future route planning.
+3. Boarding records feed into future route planning. As built, they give each upcoming night an expected rider count on the 노선 view (each booked student's show-up rate over the last 30 days, counted as 1 with fewer than 3 planned nights), and they drive the optional no-show limit. Routes themselves are still planned for every booking.
 
 ### Main navigation
 
@@ -64,8 +65,8 @@ Bottom tab bar: 오늘 귀가 (tonight's ride), 사전 신청 (advance booking),
 - Drop-off stop: the route stop nearest home is the default, nearby stops are offered as options, and the student confirms it in the day-of request.
 - Time is shown as four separate values: walk to the boarding stop, time until the bus arrives, ride time, and walk from the drop-off stop to home.
 - The day-of request is optional. A student can board with just their QR code; how drop-off is handled in that case is still open.
-- The QR code holds the student's app ID. It is used for student verification, the boarding record, and telling the driver the drop-off stop.
-- Notifications are email only (booking period announcements). There is no web push. Bus status appears only inside the app.
+- The QR code holds the student's app ID, signed with a one-minute time window so a screenshot stops working after 10 minutes (`D1.<id>.<window>.<signature>`). It is used for student verification, the boarding record, and telling the driver the drop-off stop. Staff can still type a bare ID into the reader by hand.
+- Notifications are email only (booking period announcements, sent from 운행일 by the operator; students can turn them off in 내 정보). There is no web push. Bus status appears only inside the app.
 - The home address is used only to build routes and pick stops. Drivers and other riders never see it (stated in the signup copy).
 
 **Student screens (draft):** signup and student verification, advance booking (date, time, address), day-of request (starting point, time range), option comparison (time details per stop and bus), route detail (route, number of riders), chosen bus status, drop-off stop confirmation, my QR.
@@ -79,27 +80,42 @@ Bottom tab bar: 오늘 귀가 (tonight's ride), 사전 신청 (advance booking),
 - Walking time: for route generation, estimate it as straight-line distance × 1.3 ÷ 4.5 km/h with no API calls. For student-facing times, call the Kakao walking route API (1,000 free calls a day, then ₩10 per call).
 - A VRP solver such as OR-Tools could replace steps 2–4 later, but it would need a separate Python server.
 
+**As built** (`src/server/planner/`; unit tests with `pnpm test`, a whole-night integration test with `pnpm test:night`):
+
+- Values in use: capacity 28, max walk 700 m straight-line (about 12 minutes), max ride 60 minutes, minimum 10 riders, 30-minute slots, bus speed 36 km/h × 1.35 road detour plus 1 minute per stop. The operator sets the service window and the first four values at /operator/settings (stored in `app_settings`); the rest sit in `settings.ts`. Each night's plan saves the values it was built with.
+- Advance bookings have no starting point, so the planner assumes each student starts from their own school (from the email domain). A school's boarding stop is the nearest candidate stop within 400 m, or the campus itself ("○○대학교 앞").
+- Steps follow the list above: sweep from the center of the night's boarding stops, starting at the widest angular gap; greedy set cover over candidate stops (a student with no stop in reach gets the nearest one); nearest neighbor plus 2-opt, with pickups ordered to end near the drop-offs. A group below the minimum joins a same-direction group (within 45°) in the same slot first, then the next slot, then the previous one, when capacity and ride time allow. Before merging, riders at the edge of a group move to a neighboring group in the same slot when that shortens the two routes together (about 1–2% fewer bus-minutes on test nights). A second, looser pass (up to 90° and two slots away) catches groups that are still too small.
+- Bus names come from the district of the last stop (노원행; 노원행 1 and 2 when one slot has two). When a stop's address has no district, the nearest district office decides.
+- A night's plan is fixed the first time anyone opens that night once booking has closed (00:00 KST of that date), and stored in `plans`, `buses`, `bus_stops`, and `bus_riders`. The operator can rebuild it until someone chooses or boards a bus.
+- Day-of dispatch: after every day-of choice or cancellation, a bus moves up to 15 minutes earlier when the same-direction bus in the previous slot is at least 70% full and it is at most 30% full. It stays at least 10 minutes behind that bus and never moves within 30 minutes of departure. If demand evens out, it goes back to the planned time.
+- Day-of options: a bus is offered when one of its boarding stops is within 800 m of the chosen starting point and one of its drop-off stops is within 1 km of the booked address.
+- Bus travel time between stops: the distance estimate, or real road times from the Kakao Mobility directions API when `ROUTE_TIMES=kakao` (fetched once per stop pair when a plan is stored, cached in `travel_times`, and falling back to the estimate on any error).
+- Walking times shown to students: the distance estimate, or SK TMAP pedestrian routes when `WALK_TIMES=tmap` and `TMAP_APP_KEY` are set. Kakao has no public walking-route API. Each rider's drop-off-to-home walk is fetched in the background when a plan is stored and cached in `travel_times`; anything not cached yet uses the estimate.
+- 모의 노선 runs the same planner on survey answers instead of bookings: each respondent's home, survey slot (moved to the nearest slot in the service window), and chosen start. "모두 탄다면" uses every respondent; "답한 횟수만큼" keeps each one with a fixed per-person chance by answer (4일 이상 0.9, 2–3일 0.5, 1일 0.2, 거의 안 탐 0.1), so a run is repeatable. Route settings can be changed for the run without touching 운행 설정. Nothing is stored.
+- Demo data: generated riders (`demo-rider-NNN`, `users.demo = 1`, address "예시 주소") with survey answers, made or cleared from 가입 조사 or by `pnpm seed:demo`. Every count shows real and demo apart, demo riders never get email, and the 발표 화면 marks slides that include them.
+- `DEMO_TIME` (for example `01:00`, or `2026-12-08 01:00` for another night, the date being the operating night) runs the app as if it were that moment, for daytime demos. `pnpm seed:demo` fills a local database with stops, tonight as an operating night, and 160 sample riders; it refuses a remote database unless given `--remote`.
+
 ### Stack
 
 - Solid 2.0 RC with pinned package versions, using its built-in start/server features through `@solidjs/vite-plugin` (not SolidStart). Also `@solidjs/router`, Better Auth (email OTP + email/password), Drizzle ORM on libSQL/Turso, Tailwind CSS 4, and Mailgun for email.
-- Kakao is used for all map and place features: Map Web (JavaScript) SDK with the JavaScript key, Local API keyword search for starting points, Local API address-to-coordinates for home addresses, and the walking route API. Naver Directions is ruled out because it has no walking routes. The free Kakao quota covers only the first app activated per developer account, so the team shares one account and key.
+- Kakao is used for map and place features: Map Web (JavaScript) SDK with the JavaScript key (walk map and route map), Local API keyword search for stops and starting points, Local API address-to-coordinates for home addresses, and optionally the Kakao Mobility directions API for bus travel times. Walking routes come from SK TMAP, since Kakao has no public walking API. Naver Directions is ruled out because it has no walking routes. The free Kakao quota covers only the first app activated per developer account, so the team shares one account and key.
 - The browser camera for the QR reader only works over HTTPS.
 - Mobile-first web app: content is held to a max width of `max-w-xl`, the document is `lang="ko"`, and the interface is Korean only.
 
-**Built so far:** welcome, login, signup steps 1–4 plus a completion screen, password reset, and route protection. All four tabs: 오늘 귀가 with the optional day-of request (on labeled sample route data), 사전 신청 (real bookings in the `bookings` table, on operating nights from the `operating_nights` table; each booking's time and address can be changed or the booking cancelled; time slots are labeled sample data), 내 QR, and 내 정보 (name, home address, password, sign out, account deletion). Operator data entry at /operator, behind a shared `STAFF_CODE`: operating nights (feed 사전 신청 directly) and candidate stops (`stops` table, not yet used by the sample routes). After login or signup the app asks for location permission (skipped if already decided); the starting-point list then marks and sorts by the nearest place. Distance is computed on the phone; the location is never sent to the server. Not built yet: the driver mockup and the QR reader.
+**Built so far:** welcome, login, signup steps 1–5 (the fifth is the 이용 계획 survey) plus a completion screen, password reset, and route protection. All four tabs: 오늘 귀가 on the real nightly plan, with the optional day-of request (choices in `ride_choices`, full buses can't be chosen, a missed bus shows its own state, bus detail has a route map), 사전 신청 (bookings on operating nights within the operator's service window; closes at midnight before each night, after which time and address are locked but cancelling still works), 내 QR (rotating signed code), and 내 정보 (with 탑승 기록, the last 30 boardings). At /operator, behind a shared `STAFF_CODE`: operating nights with the booking-open email, candidate stops (search, or bulk import of the Seoul open-data bus stop file, xlsx or CSV, leaving out median-lane stops and river ferry docks), starting areas (`start_areas`), the 노선 view (preview, fixed plan, past nights with boarding rate, CSV dispatch sheet), the QR reader, the driver screen, and 운행 설정. Boarding records are stored in `boardings` and switch the student's home tab to riding. After login or signup the app asks for location permission; the starting-point list then marks and sorts by the nearest place, computed on the phone. The app has a web manifest and icons so it can be added to the home screen. No sample data is left in the student app. Also at /operator: 가입 조사 (survey results by school, district, slot, frequency, start, current way home, and fare; daily answers; comments; an anonymized CSV; the signup link and QR; demo data controls), 모의 노선, and 발표 화면 (a seven-slide view for presenting).
 
 ### Open decisions
 
 - Fare amount, payment method, and how payment is collected (the service is paid).
-- Deadline for day-of requests.
-- No-show handling.
-- The list of boarding stops.
-- Drop-off for students who board without a day-of request.
-- What happens when a student's drop-off stop isn't on the route of the bus they boarded.
-- What happens when a bus is over capacity, including riders who didn't request that day.
-- Final route-generation baseline values.
-- Which car-routing API (e.g. Kakao Mobility) provides travel time between stops.
-- Whether Kakao's terms allow storing API results such as converted coordinates in the database. The code already stores `homeLat`/`homeLng`.
+- Deadline for day-of requests. For now it is an operator setting (운행 설정, default: up to 5 minutes before the bus reaches the student's boarding stop).
+- No-show handling. For now it is an operator setting, off by default (운행 설정 → 안 탄 날 제한): N or more booked-but-not-boarded planned nights in the last 30 days blocks new bookings, with the reason shown on 사전 신청.
+- The list of boarding stops. For now each school boards at the nearest operator stop within 400 m, or at the campus itself; nightlife areas board at whichever bus pickup is within 800 m.
+- Drop-off for students who board without a day-of request. For now the reader uses the stop the plan gave them on that bus, or the bus's stop nearest their booked or home address.
+- What happens when a student's drop-off stop isn't on the route of the bus they boarded. For now the reader picks that bus's stop nearest the student's booked (or home) address, and the driver screen counts it there.
+- What happens when a bus is over capacity, including riders who didn't request that day. For now a full bus can't be chosen in the day-of request, and the reader still lets a student on but shows that the bus is over capacity.
+- Final route-generation baseline values. For now the operator sets capacity, max walk, max ride, minimum riders, and the service window in 운행 설정.
+- Which car-routing API provides travel time between stops. Kakao Mobility directions is wired in behind `ROUTE_TIMES=kakao`, but the request and response fields are not yet confirmed against a live key.
+- Whether Kakao's terms allow storing API results such as converted coordinates in the database. The code already stores `homeLat`/`homeLng`, and `travel_times` caches Kakao Mobility and TMAP results when those are turned on; check both providers' terms before turning them on in production.
 
 **Terms:** 오늘 귀가, 사전 신청, 당일 신청, 하차 정류장, 승차 정류장, 노선, 배차, 기사님, 내 QR, 학교 이메일, 인증 코드.
 

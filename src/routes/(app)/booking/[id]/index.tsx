@@ -67,19 +67,23 @@ export default function BookingDetail() {
               <>
                 <Header
                   title={`${formatNight(current().night)} 밤`}
-                  description="시간이나 가는 곳을 바꿀 수 있어요. 날짜를 바꾸려면 이 신청을 취소하고 새로 신청해 주세요."
+                  description={
+                    current().locked
+                      ? "신청이 마감돼서 시간과 가는 곳은 바꿀 수 없어요. 못 타게 되면 취소해 주세요."
+                      : "시간이나 가는 곳을 바꿀 수 있어요. 날짜를 바꾸려면 이 신청을 취소하고 새로 신청해 주세요."
+                  }
                   onBackClick={() => nav("/booking")}
                 />
                 <SavedNotice message={SAVED_NOTICES[search.saved ?? ""]} class="mt-2" />
                 <ul class="mt-4 overflow-hidden rounded-2xl bg-sand-2">
                   <LinkRow
-                    href={`/booking/${current().id}/time`}
+                    href={current().locked ? undefined : `/booking/${current().id}/time`}
                     icon={<PhClockBold />}
                     title="시간"
                     value={slotRange(current().slot)}
                   />
                   <LinkRow
-                    href={`/booking/${current().id}/address`}
+                    href={current().locked ? undefined : `/booking/${current().id}/address`}
                     icon={<PhHouseBold />}
                     title="가는 곳"
                     value={current().isHome ? "집" : current().address}

@@ -13,16 +13,8 @@ export function RouteChip(props: { name: string; quiet?: boolean }) {
   );
 }
 
-export function SampleBadge() {
-  return (
-    <span class="inline-flex h-5 shrink-0 items-center rounded-sm bg-sand-3 px-1.5 text-xs font-semibold text-sand-11">
-      예시 데이터
-    </span>
-  );
-}
-
-export function SeatCount(props: { riders: number; capacity: number }) {
-  const almostFull = () => props.riders / props.capacity >= 0.85;
+export function SeatCount(props: { riders: number; capacity: number; full?: boolean }) {
+  const almostFull = () => !props.full && props.riders / props.capacity >= 0.85;
 
   return (
     <span class="inline-flex items-center gap-x-1 text-sm font-medium text-sand-11 tabular-nums">
@@ -32,6 +24,9 @@ export function SeatCount(props: { riders: number; capacity: number }) {
       </span>
       <Show when={almostFull()}>
         <span class="font-semibold text-sand-12">· 거의 찼어요</span>
+      </Show>
+      <Show when={props.full}>
+        <span class="font-semibold text-sand-12">· 자리가 다 찼어요</span>
       </Show>
     </span>
   );

@@ -6,7 +6,6 @@ import { env } from "virtual:solid-env/client";
 import { FadeScroll } from "../../../components/common/fade-scroll";
 import { OptionCard } from "../../../components/common/option-card";
 import { Footer, Header } from "../../../components/layout/screen";
-import { SampleBadge } from "../../../components/ride/badges";
 import {
   type Coords,
   currentPosition,
@@ -117,9 +116,6 @@ export default function TodayStart() {
                         <span class="font-semibold break-keep">{point().name}</span>
                         <Show when={isNearest()}>
                           <span class="text-sm font-bold text-amber-11">가장 가까워요</span>
-                        </Show>
-                        <Show when={point().isSample}>
-                          <SampleBadge />
                         </Show>
                       </span>
                       <Show when={details()}>

@@ -7,12 +7,13 @@ interface Place {
   lng: number;
 }
 
-interface KakaoMaps {
+export interface KakaoMaps {
   load(callback: () => void): void;
   LatLng: new (lat: number, lng: number) => unknown;
   LatLngBounds: new () => { extend(point: unknown): void };
   Map: new (el: HTMLElement, options: object) => { setBounds(bounds: unknown, padding: number): void };
   Marker: new (options: object) => unknown;
+  Polyline: new (options: object) => unknown;
 }
 
 declare global {
@@ -23,7 +24,7 @@ declare global {
 
 let sdk: Promise<KakaoMaps> | undefined;
 
-function loadKakaoMaps(appKey: string) {
+export function loadKakaoMaps(appKey: string) {
   sdk ??= new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false`;

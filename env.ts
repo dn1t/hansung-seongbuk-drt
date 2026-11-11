@@ -11,6 +11,10 @@ export default {
     MAILGUN_DOMAIN: v.pipe(v.string(), v.minLength(1)),
     KAKAO_REST_API_KEY: v.pipe(v.string(), v.minLength(1)),
     STAFF_CODE: v.optional(v.string(), ""),
+    ROUTE_TIMES: v.optional(v.picklist(["estimate", "kakao"]), "estimate"),
+    WALK_TIMES: v.optional(v.picklist(["estimate", "tmap"]), "estimate"),
+    TMAP_APP_KEY: v.optional(v.string(), ""),
+    DEMO_TIME: v.optional(v.pipe(v.string(), v.regex(/^(|(\d{4}-\d{2}-\d{2}[ T])?([01]\d|2[0-3]):[0-5]\d)$/)), ""),
   },
   client: {
     VITE_APP_NAME: v.optional(v.pipe(v.string(), v.minLength(1)), "DRT"),

@@ -2,10 +2,13 @@ import { useLocation, useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, For, isHydrating, Loading, onSettled, Show, untrack } from "solid-js";
 
 import { AddressPrivacyNote, AddressSearch } from "../components/common/address-search";
+import { Button } from "../components/common/button";
 import { Input } from "../components/common/input";
 import { OTPInput } from "../components/common/otp-input";
 import { Select } from "../components/common/select";
+import { Sheet } from "../components/common/sheet";
 import { Footer, Header, PasswordRules, RouteDots, SectionRule } from "../components/layout/screen";
+import { SurveyForm } from "../components/survey/survey-form";
 import { NAME_MAX_LENGTH, setupAccount } from "../lib/account";
 import { type AddressResult, saveHomeAddress } from "../lib/address";
 import { authClient } from "../lib/auth-client";
@@ -14,6 +17,20 @@ import { getJoinState, getWelcomeState, type JoinState, type JoinStep } from "..
 import { isValidPassword, PASSWORD_MAX_LENGTH } from "../lib/password";
 import { SCHOOL_DOMAINS, schoolOf } from "../lib/schools";
 import { revalidateSession } from "../lib/session";
+import { getSurveyForm, saveSurvey } from "../lib/survey";
+import type { SurveyAnswers } from "../lib/survey-options";
+
+const JOIN_STEPS = 5;
+
+const CONSENT_ITEMS: [string, string][] = [
+  ["모으는 정보", "학교 이메일, 이름, 집 주소와 그 위치, 이용 계획 답변, 신청과 탑승 기록"],
+  [
+    "쓰는 곳",
+    "학생 확인, 노선과 정류장 만들기, 운행 날짜와 시간 정하기. 조사 결과는 누구인지 알 수 없게 묶은 숫자로만 써요.",
+  ],
+  ["보관 기간", "탈퇴하면 바로 지워요."],
+  ["동의하지 않으면", "동의하지 않을 수 있지만, 그러면 가입할 수 없어요."],
+];
 
 export type WelcomePage = "welcome" | "login" | "reset-password" | JoinStep;
 type Page = WelcomePage;
@@ -69,6 +86,8 @@ export default function Welcome() {
   const [loginEmail, setLoginEmail] = createSignal("");
   const [loginPassword, setLoginPassword] = createSignal("");
   const [resetEmail, setResetEmail] = createSignal("");
+  const [agreed, setAgreed] = createSignal(false);
+  const [consentOpen, setConsentOpen] = createSignal(false);
 
   const submitVariant = (ready: boolean) => (loading() ? "loading" : ready ? "primary" : "disabled");
 
@@ -145,6 +164,12 @@ export default function Welcome() {
     if (!result.ok) throw new Error(result.message);
   }
 
+  async function answerSurvey(answers: SurveyAnswers) {
+    const result = await saveSurvey(answers);
+    if (!result.ok) throw new Error(result.message);
+    await syncJoinState();
+  }
+
   async function completeJoin(selected: AddressResult | undefined, detail: string) {
     if (!selected) throw new Error("주소를 검색해서 골라 주세요.");
     const result = await saveHomeAddress(selected.address, detail);
@@ -157,7 +182,7 @@ export default function Welcome() {
         <Show when={page() === "welcome"}>
           <Header title="" isInitialPage />
           <div class="flex flex-1 flex-col justify-end px-1 pt-16 pb-6">
-            <RouteDots current={1} total={4} spacing="wide" />
+            <RouteDots current={1} total={JOIN_STEPS} spacing="wide" />
             <h1 class="mt-7 max-w-72 text-[40px] leading-12 font-bold tracking-[-0.03em] text-balance break-keep">
               막차 때문에 먼저 일어나지 않아도 돼요
             </h1>
@@ -270,7 +295,11 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "join-1"}>
-          <Header title="학교 이메일을 알려 주세요" step={{ current: 1, total: 4 }} onBackClick={() => go("welcome")} />
+          <Header
+            title="학교 이메일을 알려 주세요"
+            step={{ current: 1, total: JOIN_STEPS }}
+            onBackClick={() => go("welcome")}
+          />
           <form
             class="flex flex-1 flex-col"
             onSubmit={(e) => {
@@ -314,6 +343,25 @@ export default function Welcome() {
                   />
                 </label>
               </div>
+              <div class="mt-1 flex items-center gap-x-3 px-1">
+                <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-x-2.5 font-medium break-keep">
+                  <input
+                    type="checkbox"
+                    name="consent"
+                    checked={agreed()}
+                    class="size-4.5 shrink-0 cursor-pointer accent-amber-9"
+                    onChange={(e) => setAgreed(e.currentTarget.checked)}
+                  />
+                  개인정보 수집과 이용에 동의해요
+                </label>
+                <button
+                  type="button"
+                  class="shrink-0 cursor-pointer text-sm font-semibold text-sand-11 underline underline-offset-4"
+                  onClick={() => setConsentOpen(true)}
+                >
+                  자세히
+                </button>
+              </div>
               <Show when={error()}>
                 <p class="px-1 font-medium text-red-11">{error()}</p>
               </Show>
@@ -321,14 +369,14 @@ export default function Welcome() {
             <Footer
               type="submit"
               buttonLabel="인증 코드 받기"
-              variant={submitVariant(emailLocal().split("@")[0].trim() !== "")}
+              variant={submitVariant(agreed() && emailLocal().split("@")[0].trim() !== "")}
             />
           </form>
         </Show>
         <Show when={page() === "join-2"}>
           <Header
             title="메일로 받은 코드를 입력해 주세요"
-            step={{ current: 2, total: 4 }}
+            step={{ current: 2, total: JOIN_STEPS }}
             onBackClick={() => {
               go("join-1");
               void authClient.$fetch("/join/reset", { method: "POST" });
@@ -374,7 +422,7 @@ export default function Welcome() {
           </form>
         </Show>
         <Show when={page() === "join-3"}>
-          <Header title="이름과 비밀번호를 정해 주세요" step={{ current: 3, total: 4 }} isInitialPage />
+          <Header title="이름과 비밀번호를 정해 주세요" step={{ current: 3, total: JOIN_STEPS }} isInitialPage />
           <form
             class="flex flex-1 flex-col"
             onSubmit={(e) => {
@@ -428,7 +476,7 @@ export default function Welcome() {
           <Header
             title="집 주소를 알려 주세요"
             description="집에서 가장 가까운 정류장을 찾는 데 써요."
-            step={{ current: 4, total: 4 }}
+            step={{ current: 4, total: JOIN_STEPS }}
             onBackClick={() => go("join-3")}
           />
           <form
@@ -451,13 +499,49 @@ export default function Welcome() {
               </Show>
               <AddressPrivacyNote class="pb-8" />
             </div>
-            <Footer type="submit" buttonLabel="가입 완료" variant={submitVariant(selectedAddress() !== undefined)} />
+            <Footer type="submit" buttonLabel="다음" variant={submitVariant(selectedAddress() !== undefined)} />
           </form>
         </Show>
+        <Show when={page() === "join-5"}>
+          <Header
+            title="이용 계획을 알려 주세요"
+            description="운행할 날과 시간, 노선을 정하는 데 써요. 내 정보에서 언제든 바꿀 수 있어요."
+            step={{ current: 5, total: JOIN_STEPS }}
+            onBackClick={() => go("join-4")}
+          />
+          <SurveyStep onSave={answerSurvey} />
+        </Show>
+        <Sheet
+          open={consentOpen()}
+          title="개인정보 수집과 이용"
+          description="가입과 운행 계획 조사에 필요한 만큼만 모아요."
+          onClose={() => setConsentOpen(false)}
+        >
+          <dl class="flex flex-col gap-y-3 px-1">
+            <For each={CONSENT_ITEMS}>
+              {([term, detail]) => (
+                <div>
+                  <dt class="text-sm font-semibold text-sand-11">{term}</dt>
+                  <dd class="mt-0.5 font-medium break-keep">{detail}</dd>
+                </div>
+              )}
+            </For>
+          </dl>
+          <Button
+            type="button"
+            class="mt-6"
+            onClick={() => {
+              setAgreed(true);
+              setConsentOpen(false);
+            }}
+          >
+            동의해요
+          </Button>
+        </Sheet>
         <Show when={page() === "complete"}>
           <Header title="" isInitialPage />
           <div class="mt-16 px-1">
-            <RouteDots current={4} total={4} spacing="wide" />
+            <RouteDots current={JOIN_STEPS} total={JOIN_STEPS} spacing="wide" />
             <h1 class="mt-7 text-3xl font-bold text-balance break-keep">
               {joinState()?.name} 님,
               <br />
@@ -503,4 +587,9 @@ export default function Welcome() {
       </div>
     </Loading>
   );
+}
+
+function SurveyStep(props: { onSave: (answers: SurveyAnswers) => Promise<void> }) {
+  const form = createMemo(() => getSurveyForm());
+  return <SurveyForm form={form()} buttonLabel="가입 완료" onSave={props.onSave} />;
 }

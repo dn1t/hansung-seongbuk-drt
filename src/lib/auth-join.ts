@@ -1,9 +1,12 @@
 import type { BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthEndpoint, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { eq } from "drizzle-orm";
 
+import { surveys } from "./app-schema";
+import { db } from "./db";
 import { isSchoolEmail, VERIFICATION_CODE_TTL } from "./schools";
 
-export type JoinStep = "join-1" | "join-2" | "join-3" | "join-4" | "complete";
+export type JoinStep = "join-1" | "join-2" | "join-3" | "join-4" | "join-5" | "complete";
 
 export interface JoinState {
   step: JoinStep;
@@ -14,6 +17,11 @@ export interface JoinState {
 
 export function isJoinedUser(user: object) {
   return Boolean((user as { homeAddress?: string | null }).homeAddress);
+}
+
+async function hasSurvey(userId: string) {
+  const [row] = await db.select({ userId: surveys.userId }).from(surveys).where(eq(surveys.userId, userId)).limit(1);
+  return row !== undefined;
 }
 
 const SEND_OTP_PATH = "/email-otp/send-verification-otp";
@@ -87,6 +95,7 @@ export const joinFlow = () =>
           const state = { email: user.email, name: user.name || undefined };
           if (!user.name) return ctx.json<JoinState>({ step: "join-3", ...state });
           if (!isJoinedUser(user)) return ctx.json<JoinState>({ step: "join-4", ...state });
+          if (!(await hasSurvey(user.id))) return ctx.json<JoinState>({ step: "join-5", ...state });
           return ctx.json<JoinState>({ step: "complete", ...state });
         }
 

@@ -9,11 +9,14 @@
     "serve": "vite preview",
     "lint": "oxlint src",
     "fmt": "oxfmt src",
+    "test": "node --test src/server/*.test.ts src/server/planner/*.test.ts src/lib/*.test.ts",
+    "test:night": "node --test tests/night.integration.ts",
     "colors": "node scripts/radix-colors.ts",
     "generate:auth": "pnpx auth generate -y --output src/lib/schema.ts",
     "generate:db": "drizzle-kit generate",
     "generate": "pnpm run generate:auth && pnpm run generate:db",
-    "migrate": "drizzle-kit migrate"
+    "migrate": "drizzle-kit migrate",
+    "seed:demo": "node --env-file-if-exists=.env scripts/seed-demo.ts"
   },
   "license": "MIT",
   "devDependencies": {
@@ -45,6 +48,7 @@
     "@solidjs/web": "^2.0.0-rc.21",
     "better-auth": "^1.7.18",
     "drizzle-orm": "1.0.0-rc.5",
+    "jsqr": "1.4.0",
     "mailgun.js": "^14.1.1",
     "solid-js": "^2.0.0-rc.21",
     "tailwind-variants": "^4.0.1",

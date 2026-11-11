@@ -5,7 +5,7 @@ import { env } from "virtual:solid-env/client";
 
 import { Footer, Header } from "../../../../components/layout/screen";
 import { BusDetail, busTitle } from "../../../../components/ride/bus-detail";
-import { getBusDetail } from "../../../../lib/ride";
+import { getBusDetail, isFull } from "../../../../lib/ride";
 import { FLOW_TOTAL_STEPS, flowHref } from "../../../../lib/ride-flow";
 
 export default function TodayBus() {
@@ -44,7 +44,8 @@ export default function TodayBus() {
               <BusDetail option={detail().option} now={detail().now} />
               <Footer
                 type="button"
-                buttonLabel="이 버스로 할게요"
+                buttonLabel={isFull(detail().option) ? "자리가 다 찼어요" : "이 버스로 할게요"}
+                variant={isFull(detail().option) ? "disabled" : "primary"}
                 onClick={() => nav(flowHref("/today/drop-off", { ...params, bus: routeParams.busId }))}
               />
             </>

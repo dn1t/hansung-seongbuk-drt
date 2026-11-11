@@ -1,25 +1,24 @@
 import { Title } from "@solidjs/meta";
-import { createMemo, createSignal, Errored, For, isPending, Loading, onSettled, Show } from "solid-js";
+import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
-import { Button } from "../../components/common/button";
-import { FadeScroll } from "../../components/common/fade-scroll";
 import { Input } from "../../components/common/input";
-import { OptionCard } from "../../components/common/option-card";
-import { SectionRule } from "../../components/layout/screen";
-import type { AddressResult } from "../../lib/address";
+import { AddPlacePanel } from "../../components/operator/place-panel";
+import { StopImport } from "../../components/operator/stop-import";
 import {
   addStop,
+  deleteAllStops,
   deleteStop,
   getStops,
   renameStop,
-  searchStopPlaces,
   type Stop,
   STOP_NAME_MAX_LENGTH,
 } from "../../lib/operator";
 
 const mapLink = (stop: Stop) =>
   `https://map.kakao.com/link/map/${encodeURIComponent(stop.name)},${stop.lat},${stop.lng}`;
+
+const ROWS_SHOWN = 200;
 
 export default function OperatorStops() {
   const stops = createMemo(() => getStops());
@@ -32,13 +31,13 @@ export default function OperatorStops() {
   return (
     <>
       <Title>{`정류장 - 운영 - ${env.VITE_APP_NAME}`}</Title>
-      <div class="grid gap-x-10 gap-y-12 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div class="grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-12 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <section class="min-w-0">
           <header class="px-1">
             <h1 class="text-3xl font-bold">정류장</h1>
             <p class="mt-2 font-medium text-balance break-keep text-sand-11">
-              노선을 만들 때 내릴 정류장 후보로 써요. 학생 앱의 노선은 아직 예시 데이터라 여기 넣은 정류장이 바로
-              보이지는 않아요.
+              노선을 만들 때 정류장 후보로 써요. 학교에서 400m 안에 있으면 타는 곳이 되고, 내리는 곳은 신청한 학생
+              집에서 가까운 정류장 중 꼭 필요한 곳만 골라요. 이미 정해진 노선은 바뀌지 않아요.
             </p>
           </header>
           <Errored
@@ -61,11 +60,16 @@ export default function OperatorStops() {
                   labelClass="w-full max-w-xs"
                   onInput={(e) => setFilter(e.currentTarget.value)}
                 />
-                <p class="px-1 pb-3.5 text-sm font-medium text-sand-11 tabular-nums">
-                  <Show when={filter().trim()} fallback={<>정류장 {stops().length}곳</>}>
-                    {stops().length}곳 중 {shown().length}곳
+                <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 px-1 pb-3.5">
+                  <p class="text-sm font-medium text-sand-11 tabular-nums">
+                    <Show when={filter().trim()} fallback={<>정류장 {stops().length.toLocaleString()}곳</>}>
+                      {stops().length.toLocaleString()}곳 중 {shown().length.toLocaleString()}곳
+                    </Show>
+                  </p>
+                  <Show when={stops().length > 0}>
+                    <DeleteAll count={stops().length} />
                   </Show>
-                </p>
+                </div>
               </div>
               <Show
                 when={stops().length > 0}
@@ -81,14 +85,14 @@ export default function OperatorStops() {
                     <p class="mt-6 px-1 font-medium text-sand-11">‘{filter().trim()}’에 맞는 정류장이 없어요.</p>
                   }
                 >
-                  <div class="mt-4 overflow-x-auto rounded-2xl border border-sand-4">
-                    <table class="w-full min-w-[36rem] border-collapse text-start">
+                  <div class="relative mt-4 overflow-x-auto rounded-2xl border border-sand-4">
+                    <table class="w-full min-w-[44rem] border-collapse text-start">
                       <thead class="bg-sand-2 text-sm font-semibold text-sand-11">
                         <tr>
                           <th scope="col" class="py-3 pr-3 pl-4 text-start font-semibold">
                             이름
                           </th>
-                          <th scope="col" class="px-3 py-3 text-start font-semibold">
+                          <th scope="col" class="min-w-44 px-3 py-3 text-start font-semibold">
                             주소
                           </th>
                           <th scope="col" class="px-3 py-3 text-start font-semibold">
@@ -100,18 +104,100 @@ export default function OperatorStops() {
                         </tr>
                       </thead>
                       <tbody>
-                        <For each={shown()}>{(stop) => <StopRow stop={stop} />}</For>
+                        <For each={shown().slice(0, ROWS_SHOWN)} keyed={(stop) => stop.id}>
+                          {(stop) => <StopRow stop={stop()} />}
+                        </For>
                       </tbody>
                     </table>
                   </div>
+                  <Show when={shown().length > ROWS_SHOWN}>
+                    <p class="mt-3 px-1 text-sm font-medium text-sand-11 tabular-nums">
+                      {`앞의 ${ROWS_SHOWN}곳만 보여요. 나머지 ${(shown().length - ROWS_SHOWN).toLocaleString()}곳은 위에서 찾아 주세요.`}
+                    </p>
+                  </Show>
                 </Show>
               </Show>
             </Loading>
           </Errored>
         </section>
-        <AddStopPanel />
+        <AddPlacePanel
+          title="정류장 넣기"
+          nameLabel="정류장 이름"
+          placeholder="한성대입구역 5번 출구"
+          hint="정류장 이름이나 역 이름을 검색해 주세요."
+          submitLabel="정류장 넣기"
+          savedText={(name) => `‘${name}’ 정류장을 넣었어요.`}
+          onAdd={addStop}
+        >
+          <StopImport />
+        </AddPlacePanel>
       </div>
     </>
+  );
+}
+
+function DeleteAll(props: { count: number }) {
+  const [confirming, setConfirming] = createSignal(false);
+  const [busy, setBusy] = createSignal(false);
+  const [error, setError] = createSignal("");
+
+  async function run() {
+    setError("");
+    setBusy(true);
+    try {
+      const result = await deleteAllStops();
+      if (!result.ok) throw new Error(result.message);
+      setConfirming(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "삭제하지 못했어요. 다시 시도해 주세요.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div class="flex flex-col items-end gap-y-1 text-sm font-semibold">
+      <Show
+        when={confirming()}
+        fallback={
+          <button
+            type="button"
+            class="cursor-pointer text-sand-11 hover:text-red-11"
+            onClick={() => {
+              setError("");
+              setConfirming(true);
+            }}
+          >
+            모두 삭제
+          </button>
+        }
+      >
+        <div class="flex items-center gap-x-3">
+          <span class="font-medium text-sand-11 tabular-nums">{props.count.toLocaleString()}곳을 모두 삭제할까요?</span>
+          <button
+            type="button"
+            disabled={busy()}
+            class="cursor-pointer text-red-11 disabled:cursor-progress"
+            onClick={() => void run()}
+          >
+            모두 삭제
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer text-sand-11 hover:text-sand-12"
+            onClick={() => setConfirming(false)}
+          >
+            취소
+          </button>
+        </div>
+        <p class="font-medium text-balance break-keep text-sand-11">이미 정해진 노선은 그대로예요.</p>
+      </Show>
+      <Show when={error()}>
+        <p role="alert" class="font-medium break-keep text-red-11">
+          {error()}
+        </p>
+      </Show>
+    </div>
   );
 }
 
@@ -242,156 +328,5 @@ function StopRow(props: { stop: Stop }) {
         </div>
       </td>
     </tr>
-  );
-}
-
-function AddStopPanel() {
-  const [query, setQuery] = createSignal("");
-  const [picked, setPicked] = createSignal<AddressResult>();
-  const [name, setName] = createSignal("");
-  const [busy, setBusy] = createSignal(false);
-  const [message, setMessage] = createSignal<{ kind: "saved" | "error"; text: string }>();
-  const results = createMemo(() => (query().length >= 2 ? searchStopPlaces(query()) : []));
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let searchInput: HTMLInputElement | undefined;
-
-  function searchSoon(value: string, delay = 300) {
-    clearTimeout(timer);
-    timer = setTimeout(() => setQuery(value.trim()), delay);
-  }
-
-  onSettled(() => () => clearTimeout(timer));
-
-  async function submit() {
-    const place = picked();
-    if (!place) return;
-    setMessage(undefined);
-    setBusy(true);
-    try {
-      const stopName = name().trim() || place.title;
-      const result = await addStop({ name: stopName, address: place.address, lat: place.lat, lng: place.lng });
-      if (!result.ok) throw new Error(result.message);
-      setMessage({ kind: "saved", text: `‘${stopName}’ 정류장을 넣었어요.` });
-      setPicked(undefined);
-      setName("");
-      setQuery("");
-      if (searchInput) {
-        searchInput.value = "";
-        searchInput.focus();
-      }
-    } catch (err) {
-      setMessage({ kind: "error", text: err instanceof Error ? err.message : "넣지 못했어요. 다시 시도해 주세요." });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <aside class="lg:sticky lg:top-8 lg:self-start">
-      <SectionRule title="정류장 넣기" />
-      <form
-        class="mt-4 flex flex-col gap-y-3.5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <Input
-          ref={(el) => (searchInput = el)}
-          type="search"
-          label="장소 검색"
-          placeholder="한성대입구역 5번 출구"
-          icon={PhMagnifyingGlass}
-          autocomplete="off"
-          onInput={(e) => {
-            setPicked(undefined);
-            searchSoon(e.currentTarget.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            e.preventDefault();
-            searchSoon(e.currentTarget.value, 0);
-          }}
-        />
-        <FadeScroll class="-mx-1 flex h-72 flex-col p-1">
-          <Errored
-            fallback={
-              <span class="m-auto px-4 text-center text-red-11">
-                장소를 검색하지 못했어요. 잠시 후 다시 시도해 주세요.
-              </span>
-            }
-          >
-            <Loading fallback={<span class="m-auto text-sand-10">검색 중…</span>}>
-              <Show
-                when={results().length > 0}
-                fallback={
-                  <span class="m-auto text-sand-10">
-                    {query().length < 2
-                      ? "정류장 이름이나 역 이름을 검색해 주세요."
-                      : isPending(() => results())
-                        ? "검색 중…"
-                        : "검색 결과가 없어요."}
-                  </span>
-                }
-              >
-                <ul class={["flex flex-col gap-y-2 transition-opacity", { "opacity-60": isPending(() => results()) }]}>
-                  <For each={results()}>
-                    {(result) => (
-                      <li>
-                        <OptionCard
-                          selected={picked()?.id === result.id}
-                          onClick={() => {
-                            setPicked(result);
-                            setName(result.title);
-                            setMessage(undefined);
-                          }}
-                        >
-                          <span class="font-semibold break-keep">{result.title}</span>
-                          <Show when={result.subtitle}>
-                            <span class="text-sm break-keep text-sand-11">{result.subtitle}</span>
-                          </Show>
-                        </OptionCard>
-                      </li>
-                    )}
-                  </For>
-                </ul>
-              </Show>
-            </Loading>
-          </Errored>
-        </FadeScroll>
-        <Input
-          type="text"
-          label="정류장 이름"
-          placeholder="장소를 고르면 채워져요"
-          maxlength={STOP_NAME_MAX_LENGTH}
-          disabled={!picked()}
-          value={name()}
-          class="disabled:cursor-not-allowed disabled:text-sand-11"
-          onInput={(e) => setName(e.currentTarget.value)}
-        />
-        <Show when={message()}>
-          {(current) => (
-            <p
-              role="status"
-              class={[
-                "flex items-center gap-x-1.5 px-1 font-semibold break-keep",
-                current().kind === "saved" ? "text-green-11" : "text-red-11",
-              ]}
-            >
-              <Show
-                when={current().kind === "saved"}
-                fallback={<PhWarningCircle aria-hidden="true" class="shrink-0" />}
-              >
-                <PhCheckCircle aria-hidden="true" class="shrink-0" />
-              </Show>
-              {current().text}
-            </p>
-          )}
-        </Show>
-        <Button type="submit" class="mt-1" variant={busy() ? "loading" : picked() ? "primary" : "disabled"}>
-          정류장 넣기
-        </Button>
-      </form>
-    </aside>
   );
 }

@@ -52,6 +52,7 @@ export const auth = betterAuth({
       homeAddressDetail: { type: "string", required: false, input: false, returned: false },
       homeLat: { type: "number", required: false, input: false, returned: false },
       homeLng: { type: "number", required: false, input: false, returned: false },
+      demo: { type: "boolean", required: false, input: false, returned: false, defaultValue: false },
     },
   },
   plugins: [

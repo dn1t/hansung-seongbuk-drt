@@ -19,7 +19,13 @@ export function Select(props: SelectProps) {
         <Show
           when={Array.isArray(props.options)}
           fallback={
-            <For each={Object.entries(props.options)}>{([value, label]) => <option value={value}>{label}</option>}</For>
+            <For each={Object.entries(props.options)} keyed={(entry) => entry[0]}>
+              {(entry) => (
+                <option value={entry()[0]} selected={props.value === entry()[0]}>
+                  {entry()[1]}
+                </option>
+              )}
+            </For>
           }
         >
           <For each={props.options as string[]}>{(value) => <option value={value}>{value}</option>}</For>

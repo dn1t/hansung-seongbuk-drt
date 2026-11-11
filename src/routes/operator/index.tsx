@@ -6,7 +6,7 @@ import { env } from "virtual:solid-env/client";
 import { Button } from "../../components/common/button";
 import { SectionRule } from "../../components/layout/screen";
 import { type NightCell, NightMonth } from "../../components/operator/night-month";
-import { getOperatorNights, setOperatingNights } from "../../lib/operator";
+import { announceNights, getOperatorNights, setOperatingNights } from "../../lib/operator";
 import { formatDate, formatNight } from "../../lib/time";
 
 const DAY = 24 * 60 * 60_000;
@@ -34,6 +34,8 @@ export default function OperatorNights() {
   const [rangeEnd, setRangeEnd] = createSignal("");
   const [weekdaysOnly, setWeekdaysOnly] = createSignal(true);
   const [rangeBusy, setRangeBusy] = createSignal(false);
+  const [confirmAnnounce, setConfirmAnnounce] = createSignal(false);
+  const [announcing, setAnnouncing] = createSignal(false);
 
   const saved = createMemo(() => new Map(data().nights.map((n) => [n.night, n.bookings])));
   const upcoming = () => data().nights.filter((n) => n.night >= data().today);
@@ -127,6 +129,18 @@ export default function OperatorNights() {
     }
   }
 
+  async function announce() {
+    setAnnouncing(true);
+    const result = await announceNights();
+    setAnnouncing(false);
+    setConfirmAnnounce(false);
+    setStatus(
+      result.ok
+        ? { kind: "saved", text: `학생 ${result.sent ?? 0}명에게 사전 신청 안내 메일을 보냈어요.` }
+        : { kind: "error", text: result.message },
+    );
+  }
+
   return (
     <>
       <Title>{`운행일 - 운영 - ${env.VITE_APP_NAME}`}</Title>
@@ -161,6 +175,41 @@ export default function OperatorNights() {
               </Show>
             </p>
           </header>
+
+          <SectionRule title="학생들에게 알리기" class="mt-10" />
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-1">
+            <p class="font-medium text-balance break-keep text-sand-11">
+              <Show
+                when={data().unannounced.length > 0}
+                fallback="새로 넣은 운행일이 생기면 여기서 가입한 학생들에게 메일로 알릴 수 있어요."
+              >
+                아직 알리지 않은 운행일 <b class="font-bold text-sand-12 tabular-nums">{data().unannounced.length}일</b>
+                을 가입한 학생 <b class="font-bold text-sand-12 tabular-nums">{data().recipients}명</b>에게 메일로
+                알려요.
+              </Show>
+            </p>
+            <Show when={data().unannounced.length > 0}>
+              <div class="flex items-center gap-x-2">
+                <Show when={confirmAnnounce()}>
+                  <button
+                    type="button"
+                    class="h-13 cursor-pointer rounded-xl px-4 font-semibold text-sand-11 hover:bg-sand-3 hover:text-sand-12"
+                    onClick={() => setConfirmAnnounce(false)}
+                  >
+                    그만두기
+                  </button>
+                </Show>
+                <Button
+                  type="button"
+                  class="w-44"
+                  variant={announcing() ? "loading" : data().recipients > 0 ? "primary" : "disabled"}
+                  onClick={() => (confirmAnnounce() ? void announce() : setConfirmAnnounce(true))}
+                >
+                  {confirmAnnounce() ? `${data().recipients}명에게 보내기` : "메일 보내기"}
+                </Button>
+              </div>
+            </Show>
+          </div>
 
           <SectionRule title="기간으로 넣기" class="mt-10" />
           <form

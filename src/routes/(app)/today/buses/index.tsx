@@ -4,9 +4,9 @@ import { createMemo, For, Loading, Show } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
 import { Header } from "../../../../components/layout/screen";
-import { RouteChip, SampleBadge, SeatCount } from "../../../../components/ride/badges";
+import { RouteChip, SeatCount } from "../../../../components/ride/badges";
 import { TimeLegs } from "../../../../components/ride/time-legs";
-import { getBusOptions } from "../../../../lib/ride";
+import { getBusOptions, isFull } from "../../../../lib/ride";
 import { FLOW_TOTAL_STEPS, flowHref } from "../../../../lib/ride-flow";
 import { formatClock, minutesBetween } from "../../../../lib/time";
 
@@ -41,16 +41,26 @@ export default function TodayBuses() {
                 <span class="text-sm font-semibold break-keep text-sand-11 tabular-nums">
                   {result().start.name} · {formatClock(result().range.from)}–{formatClock(result().range.to)}
                 </span>
-                <SampleBadge />
               </div>
               <Show
                 when={result().options.length > 0}
                 fallback={
-                  <Notice
-                    text="이 시간대에는 탈 수 있는 버스가 없어요."
-                    action="시간대 바꾸기"
-                    href={flowHref("/today/time", { ...params })}
-                  />
+                  <Show
+                    when={result().passesStart}
+                    fallback={
+                      <Notice
+                        text="오늘 밤 이 출발지 근처를 지나면서 집 가까이 가는 버스가 없어요."
+                        action="출발할 곳 바꾸기"
+                        href={flowHref("/today/start", { ...params })}
+                      />
+                    }
+                  >
+                    <Notice
+                      text="이 시간대에는 탈 수 있는 버스가 없어요."
+                      action="시간대 바꾸기"
+                      href={flowHref("/today/time", { ...params })}
+                    />
+                  </Show>
                 }
               >
                 <ul class="mt-3 flex flex-col gap-y-2">
@@ -84,7 +94,7 @@ export default function TodayBuses() {
                               walkHome={option.walkHome}
                             />
                             <div class="border-t border-sand-4 px-4 py-2.5">
-                              <SeatCount riders={option.riders} capacity={option.capacity} />
+                              <SeatCount riders={option.riders} capacity={option.capacity} full={isFull(option)} />
                             </div>
                           </a>
                         </li>

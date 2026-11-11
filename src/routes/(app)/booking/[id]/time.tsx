@@ -6,7 +6,6 @@ import { env } from "virtual:solid-env/client";
 import { MissingBooking } from "../../../../components/booking/missing-booking";
 import { SlotGrid } from "../../../../components/booking/slot-grid";
 import { Footer, Header } from "../../../../components/layout/screen";
-import { SampleBadge } from "../../../../components/ride/badges";
 import { getBookingOverview, updateBooking } from "../../../../lib/booking";
 import { formatNight } from "../../../../lib/time";
 
@@ -50,7 +49,6 @@ export default function BookingChangeTime() {
                 />
                 <div class="mt-4 flex items-center justify-between gap-x-3 px-1">
                   <span class="text-sm font-semibold text-sand-11 tabular-nums">{formatNight(current().night)} 밤</span>
-                  <SampleBadge />
                 </div>
                 <div class="mt-3">
                   <SlotGrid slots={overview().slots} selected={selected()} onSelect={setPicked} />
