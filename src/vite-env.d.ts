@@ -16,7 +16,3 @@ declare module "virtual:icons/*" {
   const component: (props: ComponentProps<"svg">) => JSX.Element;
   export default component;
 }
-
-declare module "cloudflare:workers" {
-  export function waitUntil(promise: Promise<unknown>): void;
-}

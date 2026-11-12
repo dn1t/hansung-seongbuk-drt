@@ -1,0 +1,14 @@
+{
+  "lock": false,
+  "deploy": {
+    "org": "dnlt",
+    "app": "drt",
+    "install": "pnpm install --frozen-lockfile",
+    "build": "NITRO_PRESET=deno_server pnpm build",
+    "runtime": {
+      "type": "dynamic",
+      "entrypoint": "./.output/server/index.mjs"
+    }
+  }
+}
+

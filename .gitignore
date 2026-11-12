@@ -1,7 +1,7 @@
 .dev.vars*
 dist
-.wrangler
 .output
+.wrangler
 .vercel
 .netlify
 .vinxi

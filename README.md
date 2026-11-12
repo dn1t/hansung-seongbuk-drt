@@ -11,7 +11,7 @@ pnpm migrate           # apply database migrations
 pnpm dev               # http://localhost:3000
 ```
 
-`pnpm dev` runs the server in workerd, the Workers runtime, like production. workerd can only reach a remote Turso database, so with a local `file:` database run `NODE_SSR=1 pnpm dev` to keep the server in Node. `ENV_FILE=.env.prod pnpm migrate` migrates the database in another env file.
+`pnpm dev` runs the server in Node. `ENV_FILE=.env.prod pnpm migrate` migrates the database in another env file.
 
 Other scripts:
 
@@ -21,9 +21,11 @@ Other scripts:
 | `pnpm test:night` | A whole night against a throwaway SQLite file: plan, options, choosing a bus, departure moves          |
 | `pnpm lint`       | oxlint with the Solid 2.0 rules                                                                        |
 | `pnpm fmt`        | oxfmt                                                                                                  |
-| `pnpm build`      | Production build for Workers; `pnpm serve` runs it in workerd, `pnpm start` on Node                    |
-| `pnpm cf:secrets` | Upload the server values from `.env` (or `--env <file>`) as Worker secrets (see Deploy)                |
-| `pnpm cf:deploy`  | Build and deploy to Cloudflare Workers                                                                 |
+| `pnpm build`      | Production Node build; `pnpm serve` previews it and `pnpm start` runs the emitted server              |
+| `pnpm build:deno` | Nitro `deno_server` build for Deno Deploy (`.output/`)                                                  |
+| `pnpm serve:deno` | Run the Nitro Deno server locally after `pnpm build:deno`                                               |
+| `pnpm deno:env`   | Upload the server and `VITE_` values from `.env` (or `--env <file>`) to Deno Deploy (see Deploy)       |
+| `pnpm deno:deploy` | Upload the source to Deno Deploy, which installs, builds, and ships it to production                   |
 | `pnpm seed:demo`  | Demo data for a local database (stops, tonight as an operating night, demo riders with survey answers) |
 | `pnpm generate`   | Regenerate the auth schema and a migration after schema changes                                        |
 
@@ -47,26 +49,35 @@ Optional:
 
 Every external lookup falls back to a distance estimate when its key is missing or the call fails.
 
-## Deploy to Cloudflare Workers
+## Deploy to Deno Deploy
 
-The app runs on Workers through `@cloudflare/vite-plugin` (`wrangler.jsonc`). `pnpm dev` and `pnpm serve` run the server in workerd locally; tests set `NODE_SSR=1` to keep it in Node. `pnpm start` still serves the same build on Node.
+The app uses Solid's official Nitro integration. Nitro's `deno_server` preset produces the complete server and static asset deployment in `.output/`.
 
-1. `npx wrangler login`
-2. Migrate the production database: `ENV_FILE=.env.prod pnpm migrate` (or plain `pnpm migrate` if `.env` already points at it). A new database is empty, so add stops and starting areas on /operator afterwards.
-3. `pnpm cf:secrets --env .env.prod` uploads the server values as Worker secrets, creating the Worker if it doesn't exist yet. Cloudflare starts the code once on upload, and the server refuses to start without them, so they go before the first deploy. `DEMO_TIME` is always left empty, and `BASE_URL`/`TRUSTED_ORIGINS` come only from `--url`, never from the file.
-4. `pnpm cf:deploy` builds and deploys, then prints the `*.workers.dev` address. `VITE_` values (app name, Kakao map key) are baked in at build time from `.env`.
-5. `pnpm cf:secrets --env .env.prod --url https://<address students will use>` sets `BASE_URL` and `TRUSTED_ORIGINS`. With a custom domain, give that domain, not the workers.dev address: auth rejects requests from any other origin with "Invalid origin". Secrets apply without a rebuild.
-6. Add the same address to the Kakao JavaScript key's web platform domains so the maps load.
+How it fits together:
 
-After that, `pnpm cf:deploy` ships code changes, and `pnpm cf:secrets --env .env.prod --url …` ships changed values.
+- `deno.json` tells Deno Deploy to install dependencies, run `NITRO_PRESET=deno_server pnpm build`, and start `.output/server/index.mjs`.
+- `pnpm build:deno` uses Nitro's official Deno preset. Nitro serves `.output/public` and dispatches unmatched requests to Solid's Fetchable server handler.
+- The server bundle uses the HTTP-only `@libsql/client/web`, so the server needs no native addon at runtime. The Turso URL must therefore be `libsql://` or `https://`, not `file:`.
+- `deno deploy` uploads what git would track: `.env`, `.env.prod`, `dist`, and `node_modules` stay on your machine.
 
-Login hashes passwords with scrypt and route planning takes tens of milliseconds, both over the Workers Free plan's 10 ms CPU limit, so use the Workers Paid plan.
+Steps:
+
+1. Install Deno 2 (`brew install deno`). The first `deno deploy` command opens the browser to log in.
+2. Migrate the production database: `ENV_FILE=.env.prod pnpm migrate`.
+3. Create the app once: `deno deploy create`, choose local source, keep the build settings it detects from `deno.json`, and pick a region (`us` is closer to the Turso database in Asia than `eu`). The console shows the app's address. The CLI saves the org and app in `deno.json`, so later commands don't need `--org`/`--app`.
+4. `pnpm deno:env --env .env.prod --url https://<address students will use>` uploads the server values and sets `BASE_URL` and `TRUSTED_ORIGINS` to that address. `VITE_` values go up as plain values because the build bakes them in; everything else is stored as a secret. `DEMO_TIME` is never uploaded.
+5. `pnpm deno:deploy` uploads the source; Deno Deploy installs, builds, and starts it. Run it again after changing values in step 4, since `VITE_` values only change with a new build.
+6. Add the address to the Kakao JavaScript key's web platform domains so the maps load. A custom domain is added on the organization's Domains page and assigned to the app; then repeat step 4 with that domain.
+
+To try the Deno build locally, run `turso dev --db-file local.db --port 8090`, set `TURSO_CONNECTION_URL=http://127.0.0.1:8090`, then `pnpm build:deno && PORT=3200 pnpm serve:deno` with the other values in the environment.
+
+Free plan limits to keep in mind: 10 CPU hours and 150 GiB-hours of memory a month. The app is counted at 768 MB for every second it stays loaded, so avoid anything that keeps it awake around the clock; routes are already fixed when a page is opened, not on a timer.
 
 ## Demo
 
 Demo riders are flagged `users.demo` and every operator screen counts them apart from real students. They can also be made or cleared from /operator/survey without the script.
 
-1. Point `TURSO_CONNECTION_URL` at a local file (`file:local.db`), run `pnpm migrate`, then `pnpm seed:demo`, and start the app with `NODE_SSR=1 pnpm dev`. When `DEMO_TIME` has a date, the seed fills that night. The seed refuses a remote database unless you pass `--remote`. `--night 2026-12-08` and `--riders 200` pick another night and size, and `--days 5` fills that many nights in a row (riders keep the same homes, about 85% ride each night); `--student` also creates a student you can log in as (`demo.student@hansung.ac.kr` / `drtdemo2026`, or `--email` / `--password`) with a booking tonight and booking emails turned off. `--clear` removes the demo riders and that student.
+1. Point `TURSO_CONNECTION_URL` at a local file (`file:local.db`), run `pnpm migrate`, then `pnpm seed:demo`, and start the app with `pnpm dev`. When `DEMO_TIME` has a date, the seed fills that night. The seed refuses a remote database unless you pass `--remote`. `--night 2026-12-08` and `--riders 200` pick another night and size, and `--days 5` fills that many nights in a row (riders keep the same homes, about 85% ride each night); `--student` also creates a student you can log in as (`demo.student@hansung.ac.kr` / `drtdemo2026`, or `--email` / `--password`) with a booking tonight and booking emails turned off. `--clear` removes the demo riders and that student.
 2. Sign up as a student (school email, code, name and password, home address, then the 이용 계획 survey) and book an upcoming night. Each slot's booking closes 1 hour before it leaves, and its routes are fixed the first time anyone opens the night after that; later slots stay a preview. To show a night's buses during the day, set `DEMO_TIME`.
 3. Open /operator with `STAFF_CODE`:
    - 노선 shows the generated plan.
