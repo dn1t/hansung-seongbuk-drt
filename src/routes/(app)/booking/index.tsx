@@ -6,7 +6,7 @@ import { env } from "virtual:solid-env/client";
 import { SavedNotice } from "../../../components/common/list-row";
 import { Footer, SectionRule } from "../../../components/layout/screen";
 import { getBookingOverview } from "../../../lib/booking";
-import { formatDate, formatNight, slotRange } from "../../../lib/time";
+import { formatClock, formatDate, formatNight, slotRange } from "../../../lib/time";
 
 function savedNotice(saved: string | undefined, count: string | undefined) {
   if (saved === "booked") return `${Number(count) > 1 ? `${count}일 ` : ""}신청했어요.`;
@@ -26,8 +26,8 @@ export default function BookingTab() {
         <h1 class="text-xl font-bold">사전 신청</h1>
       </div>
       <p class="mt-2 px-1 font-medium text-balance break-keep text-sand-11">
-        운행일 밤에 탈 시간을 미리 신청하면, 신청한 학생들의 집 방향으로 그날 노선이 생겨요. 신청과 변경은 운행일 전날
-        밤 12시에 마감돼요.
+        운행일 밤에 탈 시간을 미리 신청하면, 신청한 학생들의 집 방향으로 그날 노선이 생겨요. 날짜와 시간, 가는 곳은 탑승
+        1시간 전까지 바꿀 수 있어요.
       </p>
       <Errored
         fallback={(_, reset) => (
@@ -63,6 +63,19 @@ export default function BookingTab() {
               </p>
             )}
           </Show>
+          <a
+            href="/booking/routes"
+            class="mt-3 flex items-center gap-x-3 rounded-xl bg-sand-2 py-3.5 pr-3 pl-4 transition-colors active:bg-sand-3"
+          >
+            <PhPathBold aria-hidden="true" class="shrink-0 text-xl text-sand-11" />
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="font-semibold">시간대별 노선 보기</span>
+              <span class="text-sm font-medium break-keep text-sand-11">
+                지금까지의 신청으로 생긴 노선을 미리 비교해요.
+              </span>
+            </span>
+            <PhCaretRightBold aria-hidden="true" class="shrink-0 text-sm text-sand-8" />
+          </a>
           <SavedNotice message={savedNotice(params.saved, params.count)} class="mt-4" />
           <SectionRule title="내 신청" class="mt-8" />
           <Show
@@ -81,6 +94,9 @@ export default function BookingTab() {
                         <span class="font-semibold tabular-nums">{formatNight(booking.night)} 밤</span>
                         <span class="truncate text-sm font-medium text-sand-11 tabular-nums">
                           {slotRange(booking.slot)} · {booking.isHome ? "집으로" : booking.address}
+                        </span>
+                        <span class="text-sm font-medium text-sand-11 tabular-nums">
+                          {booking.locked ? "노선이 정해졌어요" : `${formatClock(booking.closesAt)}까지 바꿀 수 있어요`}
                         </span>
                       </div>
                       <PhCaretRightBold aria-hidden="true" class="shrink-0 text-sm text-sand-8" />

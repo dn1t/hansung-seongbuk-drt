@@ -3,6 +3,7 @@ import { createMemo, createSignal, For, isHydrating, Loading, onSettled, Show, u
 
 import { AddressPrivacyNote, AddressSearch } from "../components/common/address-search";
 import { Button } from "../components/common/button";
+import { DemoNotice } from "../components/common/demo-notice";
 import { Input } from "../components/common/input";
 import { OTPInput } from "../components/common/otp-input";
 import { Select } from "../components/common/select";
@@ -181,6 +182,7 @@ export default function Welcome() {
       <div class={["flex flex-col px-5", page() === "join-4" ? "h-dvh" : "flex-1"]}>
         <Show when={page() === "welcome"}>
           <Header title="" isInitialPage />
+          <DemoNotice class="mt-2" />
           <div class="flex flex-1 flex-col justify-end px-1 pt-16 pb-6">
             <RouteDots current={1} total={JOIN_STEPS} spacing="wide" />
             <h1 class="mt-7 max-w-72 text-[40px] leading-12 font-bold tracking-[-0.03em] text-balance break-keep">
@@ -211,21 +213,13 @@ export default function Welcome() {
               e.preventDefault();
               setError("");
               setLoading(true);
-              login(loginEmail(), loginPassword())
+              login(schoolEmailOf(new FormData(e.currentTarget)), loginPassword())
                 .catch(showError)
                 .finally(() => setLoading(false));
             }}
           >
             <div class="mt-4 flex flex-col gap-y-3.5">
-              <Input
-                type="email"
-                name="email"
-                label="학교 이메일"
-                placeholder="hamin@hansung.ac.kr"
-                autocomplete="email"
-                required
-                onInput={(e) => setLoginEmail(e.currentTarget.value)}
-              />
+              <SchoolEmailField autocomplete="username" onInput={setLoginEmail} />
               <Input
                 type="password"
                 name="password"
@@ -253,7 +247,7 @@ export default function Welcome() {
             <Footer
               type="submit"
               buttonLabel="로그인"
-              variant={submitVariant(loginEmail().trim() !== "" && loginPassword() !== "")}
+              variant={submitVariant(loginEmail().split("@")[0].trim() !== "" && loginPassword() !== "")}
             />
           </form>
         </Show>
@@ -304,11 +298,7 @@ export default function Welcome() {
             class="flex flex-1 flex-col"
             onSubmit={(e) => {
               e.preventDefault();
-              const form = new FormData(e.currentTarget);
-              const local = String(form.get("email") ?? "")
-                .split("@")[0]
-                .trim();
-              const address = `${local}@${form.get("domain")}`.toLowerCase();
+              const address = schoolEmailOf(new FormData(e.currentTarget));
               setCode("");
               setError("");
               setLoading(true);
@@ -319,30 +309,7 @@ export default function Welcome() {
             }}
           >
             <div class="mt-4 flex flex-col gap-y-3.5">
-              <div class="flex">
-                <Input
-                  type="text"
-                  inputmode="email"
-                  autocomplete="off"
-                  required
-                  name="email"
-                  label="학교 이메일"
-                  placeholder="hamin"
-                  onInput={(e) => setEmailLocal(e.currentTarget.value)}
-                  class="rounded-r-none"
-                  labelClass="relative z-20 flex-1 shrink-0 focus:z-30"
-                />
-                <label class="group z-10 mt-auto flex w-56 max-w-1/2 shrink-0 rounded-r-xl focus-within:z-20 focus-within:ring-2 focus-within:ring-amber-5">
-                  <span class="flex h-13 items-center border-y border-l border-y-sand-5 border-l-transparent bg-sand-3 pl-4 text-lg text-sand-11 group-focus-within:border-y-amber-8 group-focus-within:border-l-amber-8">
-                    @
-                  </span>
-                  <Select
-                    name="domain"
-                    class="w-full rounded-l-none border-l-0 bg-sand-3 pl-0.5 focus:ring-0"
-                    options={[...SCHOOL_DOMAINS]}
-                  />
-                </label>
-              </div>
+              <SchoolEmailField autocomplete="off" onInput={setEmailLocal} />
               <div class="mt-1 flex items-center gap-x-3 px-1">
                 <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-x-2.5 font-medium break-keep">
                   <input
@@ -592,4 +559,54 @@ export default function Welcome() {
 function SurveyStep(props: { onSave: (answers: SurveyAnswers) => Promise<void> }) {
   const form = createMemo(() => getSurveyForm());
   return <SurveyForm form={form()} buttonLabel="가입 완료" onSave={props.onSave} />;
+}
+
+function schoolEmailOf(form: FormData) {
+  const local = String(form.get("email") ?? "")
+    .split("@")[0]
+    .trim();
+  return `${local}@${form.get("domain")}`.toLowerCase();
+}
+
+function SchoolEmailField(props: { autocomplete: "off" | "username"; onInput: (local: string) => void }) {
+  const domains: readonly string[] = SCHOOL_DOMAINS;
+
+  return (
+    <div class="flex">
+      <Input
+        type="text"
+        inputmode="email"
+        autocomplete={props.autocomplete}
+        autocapitalize="off"
+        spellcheck={false}
+        required
+        name="email"
+        label="학교 이메일"
+        placeholder="hamin"
+        onInput={(e) => {
+          const [local, typed] = e.currentTarget.value.split("@");
+          const school = typed?.trim().toLowerCase();
+          const domain = e.currentTarget.form?.elements.namedItem("domain");
+          if (school && domain instanceof HTMLSelectElement && domains.includes(school)) {
+            domain.value = school;
+            e.currentTarget.value = local;
+          }
+          props.onInput(e.currentTarget.value);
+        }}
+        class="rounded-r-none"
+        labelClass="relative z-20 flex-1 shrink-0 focus:z-30"
+      />
+      <label class="group z-10 mt-auto flex w-56 max-w-1/2 shrink-0 rounded-r-xl focus-within:z-20 focus-within:ring-2 focus-within:ring-amber-5">
+        <span class="flex h-13 items-center border-y border-l border-y-sand-5 border-l-transparent bg-sand-3 pl-4 text-lg text-sand-11 group-focus-within:border-y-amber-8 group-focus-within:border-l-amber-8">
+          @
+        </span>
+        <Select
+          name="domain"
+          aria-label="학교 도메인"
+          class="w-full rounded-l-none border-l-0 bg-sand-3 pl-0.5 focus:ring-0"
+          options={[...SCHOOL_DOMAINS]}
+        />
+      </label>
+    </div>
+  );
 }

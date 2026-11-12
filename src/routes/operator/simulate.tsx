@@ -12,10 +12,12 @@ import {
   type ResearchParams,
   researchInput,
   researchQuery,
+  PRIORITY_LABELS,
   Steps,
   Summary,
 } from "../../components/operator/research-view";
-import { type Demand, getResearchPlan, type ResearchPlan } from "../../lib/research";
+import type { PlanPriority } from "../../lib/operator";
+import { getResearchPlan, type ResearchPlan } from "../../lib/research";
 import { slotRange } from "../../lib/time";
 
 const NUMBER_FIELDS: { key: NumberKey; label: string; unit: string }[] = [
@@ -111,9 +113,27 @@ export default function OperatorSimulate() {
             </fieldset>
             <fieldset class="flex flex-col gap-y-1.5">
               <legend class="mb-1.5 text-sm font-semibold text-sand-11">이날 탈 학생</legend>
-              <DemandTabs
+              <Tabs
+                label="이날 탈 학생"
+                options={[
+                  ["all", "모두 탄다면"],
+                  ["typical", "답한 횟수만큼"],
+                ]}
                 value={plan().input.demand}
                 onChange={(demand) => setParams({ demand: demand === "all" ? undefined : demand })}
+              />
+            </fieldset>
+            <fieldset class="flex flex-col gap-y-1.5">
+              <legend class="mb-1.5 text-sm font-semibold text-sand-11">먼저 볼 것</legend>
+              <Tabs
+                label="먼저 볼 것"
+                options={Object.entries(PRIORITY_LABELS) as [PlanPriority, string][]}
+                value={plan().input.priority}
+                onChange={(priority) => {
+                  setSlot(undefined);
+                  setSelected(undefined);
+                  setParams({ priority: priority === plan().defaults.priority ? undefined : priority });
+                }}
               />
             </fieldset>
             <fieldset class="flex flex-col gap-y-1.5">
@@ -275,21 +295,22 @@ function Check(props: { label: string; checked: boolean; onChange: (on: boolean)
   );
 }
 
-function DemandTabs(props: { value: Demand; onChange: (value: Demand) => void }) {
-  const options: [Demand, string][] = [
-    ["all", "모두 탄다면"],
-    ["typical", "답한 횟수만큼"],
-  ];
+function Tabs<T extends string>(props: {
+  label: string;
+  options: [T, string][];
+  value: T;
+  onChange: (value: T) => void;
+}) {
   return (
-    <div role="radiogroup" aria-label="이날 탈 학생" class="flex h-13 items-center rounded-xl bg-sand-3 p-1">
-      <For each={options}>
+    <div role="radiogroup" aria-label={props.label} class="flex h-13 items-center rounded-xl bg-sand-3 p-1">
+      <For each={props.options}>
         {([key, label]) => (
           <button
             type="button"
             role="radio"
             aria-checked={props.value === key ? "true" : "false"}
             class={[
-              "h-full cursor-pointer rounded-lg px-4 font-semibold transition-colors",
+              "h-full cursor-pointer rounded-lg px-4 font-semibold whitespace-nowrap transition-colors",
               props.value === key ? "bg-sand-1 text-sand-12" : "text-sand-11 hover:text-sand-12",
             ]}
             onClick={() => props.onChange(key)}

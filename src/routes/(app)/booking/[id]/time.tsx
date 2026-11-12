@@ -6,7 +6,7 @@ import { env } from "virtual:solid-env/client";
 import { MissingBooking } from "../../../../components/booking/missing-booking";
 import { SlotGrid } from "../../../../components/booking/slot-grid";
 import { Footer, Header } from "../../../../components/layout/screen";
-import { getBookingOverview, updateBooking } from "../../../../lib/booking";
+import { getBookingOverview, getSlotRoutes, updateBooking } from "../../../../lib/booking";
 import { formatNight } from "../../../../lib/time";
 
 export default function BookingChangeTime() {
@@ -14,6 +14,10 @@ export default function BookingChangeTime() {
   const params = useParams<{ id: string }>();
   const overview = createMemo(() => getBookingOverview());
   const booking = () => overview().bookings.find((b) => b.id === params.id);
+  const routes = createMemo(() => {
+    const night = booking()?.night;
+    return getSlotRoutes(night ? [night] : []);
+  });
   const [picked, setPicked] = createSignal<string>();
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal("");
@@ -40,6 +44,7 @@ export default function BookingChangeTime() {
         <Show when={booking()} fallback={<MissingBooking />}>
           {(current) => {
             const selected = () => picked() ?? current().slot;
+            const counts = () => routes()[current().night] ?? {};
             return (
               <>
                 <Header
@@ -51,8 +56,22 @@ export default function BookingChangeTime() {
                   <span class="text-sm font-semibold text-sand-11 tabular-nums">{formatNight(current().night)} 밤</span>
                 </div>
                 <div class="mt-3">
-                  <SlotGrid slots={overview().slots} selected={selected()} onSelect={setPicked} />
+                  <SlotGrid
+                    slots={overview().slots}
+                    selected={selected()}
+                    onSelect={setPicked}
+                    routes={counts()}
+                    closed={overview().slots.filter(
+                      (slot) =>
+                        overview().openSlots[current().night] !== undefined &&
+                        !overview().openSlots[current().night].includes(slot),
+                    )}
+                  />
                 </div>
+                <p class="mt-3 px-1 text-sm font-medium break-keep text-sand-11">
+                  숫자는 지금까지의 신청으로 생긴 노선 수예요. 노선이 없는 시간도 고를 수 있어요. 신청한 학생이 모이면
+                  그 시간에 노선이 생겨요.
+                </p>
                 <Show when={error()}>
                   <p class="mt-4 px-1 font-medium break-keep text-red-11">{error()}</p>
                 </Show>

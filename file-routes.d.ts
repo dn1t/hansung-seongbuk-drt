@@ -83,6 +83,12 @@ declare module "virtual:file-routes" {
       $$route?: undefined;
     },
     {
+      path: "/(app)/booking/routes";
+      page: true;
+      $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/booking/routes"), Extract<"default", keyof typeof import("./src/routes/(app)/booking/routes")>>>;
+      $$route?: undefined;
+    },
+    {
       path: "/(app)/";
       page: true;
       $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/index"), Extract<"default", keyof typeof import("./src/routes/(app)/index")>>>;
@@ -409,6 +415,14 @@ declare module "virtual:file-routes" {
           id: "/today/buses/";
           page: true;
           $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/today/buses/index"), Extract<"default", keyof typeof import("./src/routes/(app)/today/buses/index")>>>;
+          $$route?: undefined;
+          children?: undefined;
+        },
+        {
+          path: "/booking/routes";
+          id: "/booking/routes";
+          page: true;
+          $component: FileRouteLazyRef<Pick<typeof import("./src/routes/(app)/booking/routes"), Extract<"default", keyof typeof import("./src/routes/(app)/booking/routes")>>>;
           $$route?: undefined;
           children?: undefined;
         },

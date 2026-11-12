@@ -23,7 +23,7 @@ export default function OperatorDriver() {
   };
   const nextSeq = () => {
     const current = shown();
-    return current?.stops.find((stop) => stop.at >= current.now)?.seq;
+    return current?.stops.find((stop) => stop.at >= current.now && !stop.skip)?.seq;
   };
 
   onSettled(() => {
@@ -88,6 +88,16 @@ export default function OperatorDriver() {
                         탈 예정 {current().bus.load}/{current().bus.capacity}명
                       </span>
                     </div>
+                    <Show when={current().skipped > 0}>
+                      <p class="mt-2 px-1 text-sm font-semibold break-keep text-sand-12">
+                        탄 학생이 내리지 않는 정류장 {current().skipped}곳은 들르지 않고 지나가요.
+                      </p>
+                    </Show>
+                    <Show when={!current().boardingDone}>
+                      <p class="mt-2 px-1 text-sm font-medium break-keep text-sand-11">
+                        마지막 타는 곳을 지나면, 탄 학생이 없는 내리는 곳은 지나치도록 바뀌어요.
+                      </p>
+                    </Show>
                     <Show when={current().unknownDropOff > 0}>
                       <p class="mt-2 px-1 text-sm font-semibold break-keep text-red-11">
                         내릴 곳을 모르는 학생이 {current().unknownDropOff}명 있어요. 내릴 때 말해 달라고 해 주세요.
@@ -104,20 +114,30 @@ export default function OperatorDriver() {
                               class={[
                                 "flex items-center gap-x-4 border-b border-sand-4 px-4 py-3 last:border-b-0",
                                 isNext() && "bg-amber-3",
-                                passed() && "text-sand-10",
+                                (passed() || stop().skip) && "text-sand-10",
                               ]}
                             >
                               <span class="w-12 shrink-0 font-semibold tabular-nums">{formatClock(stop().at)}</span>
                               <span class="flex min-w-0 flex-1 flex-col">
-                                <span class={["text-lg break-keep", isNext() ? "font-bold" : "font-semibold"]}>
+                                <span
+                                  class={[
+                                    "text-lg break-keep",
+                                    isNext() ? "font-bold" : "font-semibold",
+                                    stop().skip && "line-through",
+                                  ]}
+                                >
                                   {stop().name}
                                 </span>
                                 <span class="text-sm font-medium text-sand-11">
-                                  {stop().kind === "board" ? "타는 곳" : "내리는 곳"}
+                                  {stop().kind === "board"
+                                    ? "타는 곳"
+                                    : stop().skip
+                                      ? "내리는 학생이 없어 지나쳐요"
+                                      : "내리는 곳"}
                                   <Show when={isNext()}> · 다음 정류장</Show>
                                 </span>
                               </span>
-                              <Show when={stop().kind === "alight"}>
+                              <Show when={stop().kind === "alight" && !stop().skip}>
                                 <span class="flex shrink-0 flex-col items-end tabular-nums">
                                   <span
                                     class={["text-xl font-bold", stop().getOff > 0 ? "text-amber-11" : "text-sand-10"]}

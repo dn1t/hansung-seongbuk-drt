@@ -4,16 +4,28 @@ import type { JSX } from "@solidjs/web";
 import { createMemo, createSignal, Errored, For, Loading, Match, onSettled, Show, Switch } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
+import { DemoNotice } from "../../components/common/demo-notice";
 import { Footer, RouteDots } from "../../components/layout/screen";
 import { RouteChip, SeatCount } from "../../components/ride/badges";
 import { createTickingNow } from "../../components/ride/clock";
 import { RouteTimeline, ridingRows, tripRows } from "../../components/ride/route-timeline";
 import { TimeLegs } from "../../components/ride/time-legs";
-import { getTonight, refreshTonight, type RideState, type Tonight } from "../../lib/ride";
+import { type Coords, currentPosition, distanceMeters, locationPermission } from "../../lib/geo";
+import {
+  getBusOptions,
+  getStartPoints,
+  getTonight,
+  isFull,
+  refreshTonight,
+  type RideState,
+  type Tonight,
+} from "../../lib/ride";
 import { flowHref } from "../../lib/ride-flow";
 import { formatClock, formatMinutes, formatNight, minutesBetween, withDirectionParticle } from "../../lib/time";
 
 type StateOf<K extends Tonight["kind"]> = Extract<Tonight, { kind: K }>;
+
+const NEAR_START_METERS = 1500;
 
 export default function Home() {
   const nav = useNavigate();
@@ -36,7 +48,8 @@ export default function Home() {
   return (
     <div class="flex flex-1 flex-col px-5 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <Title>{`오늘 귀가 - ${env.VITE_APP_NAME}`}</Title>
-      <div class="mt-8 flex h-7 items-center justify-between px-1">
+      <DemoNotice class="mt-6" />
+      <div class="mt-6 flex h-7 items-center justify-between px-1">
         <h1 class="text-xl font-bold">오늘 귀가</h1>
       </div>
       <Errored
@@ -134,15 +147,24 @@ export default function Home() {
                       )}
                     </Show>
                   </Card>
-                  <p class="mt-4 px-1 text-sm font-medium text-balance break-keep text-sand-11">
-                    당일 신청은 선택이에요. 출발할 곳과 시간, 내릴 정류장을 직접 고를 수 있어요.
-                  </p>
-                  <Footer
-                    type="button"
-                    buttonLabel="탈 버스 고르기"
-                    aboveTabBar
-                    onClick={() => nav(flowHref("/today/start", { ...state().resume }))}
-                  />
+                  <Show when={state().fixesAt} fallback={<NearbyRoutes state={state()} />}>
+                    {(fixesAt) => (
+                      <section class="mt-3 rounded-2xl border border-sand-4 px-5 py-4">
+                        <p class="font-semibold break-keep tabular-nums">노선은 {formatClock(fixesAt())}에 정해져요</p>
+                        <p class="mt-1 text-sm font-medium break-keep text-sand-11">
+                          탑승 1시간 전에 그때까지의 신청으로 노선이 정해지고, 그 전까지는 사전 신청에서 시간과 가는
+                          곳을 바꿀 수 있어요.
+                        </p>
+                        <a
+                          href={`/booking/routes?slot=${encodeURIComponent(state().range.from)}`}
+                          class="mt-3 flex w-max items-center gap-x-0.5 font-semibold"
+                        >
+                          지금 생길 노선 미리 보기
+                          <PhCaretRightBold aria-hidden="true" class="text-sm text-sand-11" />
+                        </a>
+                      </section>
+                    )}
+                  </Show>
                 </>
               )}
             </Match>
@@ -293,5 +315,114 @@ function RidingCard(props: { state: RideState }) {
         기사님 화면에 내릴 정류장이 표시돼 있어요.
       </p>
     </Card>
+  );
+}
+
+function NearbyRoutes(props: { state: StateOf<"booked"> }) {
+  const nav = useNavigate();
+  const points = createMemo(() => getStartPoints());
+  const [here, setHere] = createSignal<Coords>();
+  const startId = createMemo(() => {
+    const list = points().points;
+    if (props.state.resume.start && list.some((p) => p.id === props.state.resume.start)) {
+      return props.state.resume.start;
+    }
+    const near = here();
+    if (near) {
+      const nearest = [...list].sort((a, b) => distanceMeters(a, near) - distanceMeters(b, near))[0];
+      if (nearest && distanceMeters(nearest, near) <= NEAR_START_METERS) return nearest.id;
+    }
+    return list[0]?.id ?? "";
+  });
+  const start = () => points().points.find((p) => p.id === startId());
+  const options = createMemo(() => getBusOptions(startId(), props.state.range.from, props.state.range.to));
+  const flow = (busId?: string) =>
+    flowHref(busId ? `/today/buses/${busId}` : "/today/buses", {
+      start: startId(),
+      from: props.state.range.from,
+      to: props.state.range.to,
+    });
+
+  onSettled(() => {
+    void locationPermission().then((permission) => {
+      if (permission !== "granted") return;
+      currentPosition()
+        .then((coords) => setHere(coords))
+        .catch(() => undefined);
+    });
+  });
+
+  return (
+    <section class="mt-8">
+      <div class="flex items-center gap-x-3 px-1">
+        <h2 class="shrink-0 text-sm font-bold text-sand-11">내 집 근처로 가는 노선</h2>
+        <span aria-hidden="true" class="h-px flex-1 bg-sand-4" />
+      </div>
+      <Loading fallback={<div class="h-40" />}>
+        <p class="mt-3 flex flex-wrap items-center gap-x-1.5 px-1 text-sm font-medium break-keep text-sand-11">
+          <Show
+            when={here() && start()?.id !== points().points[0]?.id}
+            fallback={<span>{start()?.name}에서 출발</span>}
+          >
+            <span>지금 위치에서 가까운 {start()?.name}에서 출발</span>
+          </Show>
+          <a href={flowHref("/today/start", { start: startId() })} class="font-semibold text-amber-11">
+            바꾸기
+          </a>
+        </p>
+        <Show
+          when={(options()?.options.length ?? 0) > 0}
+          fallback={
+            <p class="mt-3 px-1 font-medium break-keep text-sand-11">
+              이 시간에 고를 수 있는 노선이 없어요. 내 QR로 오는 버스에 타면 돼요.
+            </p>
+          }
+        >
+          <ul class="mt-3 overflow-hidden rounded-2xl bg-sand-2">
+            <For each={options()?.options ?? []} keyed={(option) => option.busId}>
+              {(option, i) => {
+                const board = () => option().stops[option().boardIndex];
+                const alight = () => option().stops[option().alightIndex];
+                return (
+                  <li class={i() > 0 ? "border-t border-sand-4" : undefined}>
+                    <div class="flex items-center gap-x-3 py-3.5 pr-3 pl-4">
+                      <div class="flex min-w-0 flex-1 flex-col gap-y-1">
+                        <span class="flex items-center gap-x-2">
+                          <span class="font-bold tabular-nums">{formatClock(board().at)}</span>
+                          <RouteChip name={option().routeName} quiet />
+                          <Show when={option().mine}>
+                            <span class="text-sm font-semibold text-amber-11">고른 노선</span>
+                          </Show>
+                        </span>
+                        <span class="text-sm font-medium break-keep text-sand-11">
+                          {board().name}에서 타서 {alight().name}에서 내려요 · 집까지 걸어서 {option().walkHome}분
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isFull(option())}
+                        class={[
+                          "h-10 shrink-0 rounded-xl px-3.5 text-sm font-bold whitespace-nowrap",
+                          isFull(option())
+                            ? "cursor-not-allowed bg-sand-3 text-sand-11"
+                            : "cursor-pointer bg-sand-4 text-sand-12 active:bg-sand-5",
+                        ]}
+                        onClick={() => nav(flow(option().busId))}
+                      >
+                        {isFull(option()) ? "자리 없음" : "노선 선택"}
+                      </button>
+                    </div>
+                  </li>
+                );
+              }}
+            </For>
+          </ul>
+        </Show>
+        <p class="mt-3 px-1 text-sm font-medium break-keep text-sand-11">
+          노선을 고르면 탈 정류장까지 걷는 시간, 기다리는 시간, 타고 가는 시간, 내려서 집까지 걷는 시간을 볼 수 있어요.
+          고르지 않아도 내 QR로 탈 수 있어요.
+        </p>
+      </Loading>
+    </section>
   );
 }

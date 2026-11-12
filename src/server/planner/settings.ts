@@ -11,9 +11,14 @@ export interface PlanSettings {
   dwellMinutes: number;
   mergeBearingDegrees: number;
   walkWeight: number;
-  busStartMinutes: number;
   lateShiftMinutes: number;
   foldThinSlots: boolean;
+  rideWeight: number;
+  turnMinutes: number;
+  tripCostMinutes: number;
+  fleetCostMinutes: number;
+  slotMinutes: number;
+  maxDeadheadMinutes: number;
 }
 
 export interface DispatchSettings {
@@ -35,7 +40,7 @@ export const PLAN_SETTINGS: PlanSettings = {
   capacity: 28,
   maxWalkMeters: 700,
   maxRideMinutes: 60,
-  minRiders: 10,
+  minRiders: 4,
   pickupWalkMeters: 400,
   walkDetour: 1.3,
   walkMetersPerMinute: 75,
@@ -44,9 +49,14 @@ export const PLAN_SETTINGS: PlanSettings = {
   dwellMinutes: 1,
   mergeBearingDegrees: 45,
   walkWeight: 0.25,
-  busStartMinutes: 15,
-  lateShiftMinutes: 4,
+  lateShiftMinutes: 10,
   foldThinSlots: true,
+  rideWeight: 0.5,
+  turnMinutes: 5,
+  tripCostMinutes: 5,
+  fleetCostMinutes: 240,
+  slotMinutes: 30,
+  maxDeadheadMinutes: 30,
 };
 
 export const DISPATCH_SETTINGS: DispatchSettings = {

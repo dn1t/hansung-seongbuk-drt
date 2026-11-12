@@ -32,6 +32,12 @@ export function nightClock(night: string, clock: string) {
   return midnight + ((h < 12 ? h + 24 : h) * 60 + m) * MINUTE;
 }
 
+export const BOOKING_CUTOFF_MINUTES = 60;
+
+export function slotCutoff(night: string, clock: string) {
+  return nightClock(night, clock) - BOOKING_CUTOFF_MINUTES * MINUTE;
+}
+
 export function slotEnd(night: string, clock: string) {
   return nightClock(night, clock) + SLOT_MINUTES * MINUTE;
 }

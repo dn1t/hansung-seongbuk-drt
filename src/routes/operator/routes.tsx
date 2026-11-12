@@ -17,20 +17,36 @@ const csvCell = (value: string | number) => {
 };
 
 function downloadPlan(plan: OperatorPlan) {
-  const header = ["출발 시간대", "버스", "출발", "순서", "정류장", "도착", "구분", "타는 학생", "내리는 학생"];
-  const rows = plan.buses.flatMap((bus) =>
-    bus.stops.map((stop, i) => [
-      bus.slot,
-      bus.name,
-      formatClock(bus.departs),
-      i + 1,
-      stop.name,
-      formatClock(stop.at),
-      stop.kind === "board" ? "타는 곳" : "내리는 곳",
-      stop.kind === "board" ? stop.riders : 0,
-      stop.kind === "alight" ? stop.riders : 0,
-    ]),
-  );
+  const header = [
+    "호차",
+    "상태",
+    "출발 시간대",
+    "노선",
+    "출발",
+    "순서",
+    "정류장",
+    "도착",
+    "구분",
+    "타는 학생",
+    "내리는 학생",
+  ];
+  const rows = [...plan.buses]
+    .sort((a, b) => a.vehicle - b.vehicle || a.departs - b.departs)
+    .flatMap((bus) =>
+      bus.stops.map((stop, i) => [
+        bus.vehicle,
+        bus.fixed ? "확정" : "예상",
+        bus.slot,
+        bus.name,
+        formatClock(bus.departs),
+        i + 1,
+        stop.name,
+        formatClock(stop.at),
+        stop.kind === "board" ? "타는 곳" : "내리는 곳",
+        stop.kind === "board" ? stop.riders : 0,
+        stop.kind === "alight" ? stop.riders : 0,
+      ]),
+    );
   const text = "\uFEFF" + [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
   const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
@@ -78,7 +94,7 @@ export default function OperatorRoutes() {
             <div class="min-w-0">
               <h1 class="text-3xl font-bold">노선</h1>
               <p class="mt-2 font-medium text-balance break-keep text-sand-11">
-                사전 신청이 마감되면 그날 노선이 정해져요. 마감 전에는 지금까지의 신청으로 미리 볼 수 있어요.
+                노선은 시간대마다 탑승 1시간 전에 정해져요. 그 전 시간대는 지금까지의 신청으로 미리 볼 수 있어요.
               </p>
             </div>
             <Show when={plan().nights.length > 0}>
@@ -113,22 +129,25 @@ export default function OperatorRoutes() {
             <Match when={true}>
               <div class="mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-1">
                 <p class="text-sm font-medium text-sand-11 tabular-nums">
-                  <b class={["font-bold", plan().status === "fixed" ? "text-amber-11" : "text-sand-12"]}>
-                    {plan().status === "fixed" ? "확정" : "미리 보기"}
+                  <b class={["font-bold", plan().status === "preview" ? "text-sand-12" : "text-green-11"]}>
+                    {{ fixed: "확정", partial: "일부 확정", preview: "미리 보기", none: "" }[plan().status]}
                   </b>
                   <span class="px-1.5 text-sand-10">·</span>
                   신청 <b class="font-bold text-sand-12">{plan().booked}명</b>
+                  <Show when={plan().demo > 0}> (데모 {plan().demo}명)</Show>
                   <span class="px-1.5 text-sand-10">·</span>
                   <Show when={plan().night >= plan().tonight && plan().booked > 0}>
                     예상 탑승 <b class="font-bold text-sand-12">{Math.round(plan().expected)}명</b>
                     <span class="px-1.5 text-sand-10">·</span>
                   </Show>
-                  버스 <b class="font-bold text-sand-12">{plan().buses.length}대</b>
+                  버스 <b class="font-bold text-sand-12">{plan().fleet}대</b>
+                  <span class="px-1.5 text-sand-10">·</span>
+                  운행 <b class="font-bold text-sand-12">{plan().buses.length}번</b>
                   <Show when={plan().buses.length > 0}>
                     <span class="px-1.5 text-sand-10">·</span>
                     집까지 평균 <b class="font-bold text-sand-12">{Math.round(plan().averageWalk)}분</b>
                   </Show>
-                  <Show when={plan().status === "fixed"}>
+                  <Show when={plan().status !== "preview"}>
                     <span class="px-1.5 text-sand-10">·</span>
                     당일 신청 <b class="font-bold text-sand-12">{plan().dayOf}명</b>
                     <span class="px-1.5 text-sand-10">·</span>
@@ -191,7 +210,11 @@ export default function OperatorRoutes() {
                           <For each={group().buses} keyed={(bus) => bus.key}>
                             {(bus) => (
                               <li>
-                                <BusCard bus={bus()} fixed={plan().status === "fixed"} />
+                                <BusCard
+                                  bus={bus()}
+                                  fixed={bus().fixed}
+                                  status={plan().status === "partial" ? (bus().fixed ? "확정" : "예상") : undefined}
+                                />
                               </li>
                             )}
                           </For>

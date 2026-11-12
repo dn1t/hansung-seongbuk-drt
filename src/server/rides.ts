@@ -4,7 +4,7 @@ import { bookings, operatingNights, rideChoices } from "../lib/app-schema";
 import { db } from "../lib/db";
 import type { BusOption, ChooseRideResult, FlowParams, StartPoint, StopTime, Tonight } from "../lib/ride";
 import { schoolOf } from "../lib/schools";
-import { isSlot, nightClock, serviceNow, slotEnd, slotIndex, tonight } from "./clock";
+import { isSlot, nightClock, serviceNow, slotCutoff, slotEnd, slotIndex, tonight } from "./clock";
 import { SCHOOL_PLACES, type StartPlace, startOfSchool, startPlaces } from "./places";
 import { distance, type Point } from "./planner/geo";
 import { DAY_OF_SETTINGS } from "./planner/settings";
@@ -178,8 +178,14 @@ export async function tonightFor(rider: Rider): Promise<Tonight> {
   if (!booking) return (await isOperatingNight(night)) ? { kind: "not-booked" } : noService(rider.id, night);
 
   const bookedSlot = { from: nightClock(night, booking.slot), to: slotEnd(night, booking.slot) };
+  const window = await serviceSlots();
+  const next = window[window.indexOf(booking.slot) + 1];
+  const range = { from: booking.slot, to: next ?? booking.slot };
   const ctx = await contextFor(rider, booking);
-  if (!ctx) return { kind: "booked", slot: bookedSlot, resume: NO_RESUME };
+  const fixesAt = [booking.slot, next]
+    .flatMap((slot) => (slot ? [slotCutoff(night, slot)] : []))
+    .find((at) => at > serviceNow());
+  if (!ctx) return { kind: "booked", slot: bookedSlot, range, fixesAt, resume: NO_RESUME };
 
   const { state, now } = ctx;
   const busById = (id: string | undefined) => state.buses.find((bus) => bus.id === id);
@@ -239,11 +245,12 @@ export async function tonightFor(rider: Rider): Promise<Tonight> {
     return {
       kind: "booked",
       slot: { from: nightClock(night, seatBus.slot), to: slotEnd(night, seatBus.slot) },
+      range: { from: booking.slot, to: slotIndex(seatBus.slot) > slotIndex(range.to) ? seatBus.slot : range.to },
       dropOff: stop && { name: stop.name, walkHome: ctx.walk(stop, ctx.home) },
       resume,
     };
   }
-  return { kind: "booked", slot: bookedSlot, resume };
+  return { kind: "booked", slot: bookedSlot, range, fixesAt: seat ? undefined : fixesAt, resume };
 }
 
 export async function startPointsFor(rider: Rider): Promise<{ points: StartPoint[]; ownSchool: string | undefined }> {

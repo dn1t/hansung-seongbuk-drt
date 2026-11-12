@@ -9,6 +9,7 @@ import { createServer, type ViteDevServer } from "vite";
 
 import type * as BoardingModule from "../src/server/boarding";
 import type * as CancelModule from "../src/server/cancel";
+import type * as DemoModule from "../src/server/demo";
 import type * as ClockModule from "../src/server/clock";
 import type * as NoShowModule from "../src/server/no-show";
 import type * as PlansModule from "../src/server/plans";
@@ -28,7 +29,7 @@ Object.assign(process.env, {
   STAFF_CODE: "",
   ROUTE_TIMES: "estimate",
   WALK_TIMES: "estimate",
-  DEMO_TIME: "22:00",
+  DEMO_TIME: "22:30",
   NODE_SSR: "1",
 });
 
@@ -40,6 +41,7 @@ type Boarding = typeof BoardingModule;
 type Cancel = typeof CancelModule;
 type NoShow = typeof NoShowModule;
 type Service = typeof ServiceModule;
+type Demo = typeof DemoModule;
 let rides: Rides;
 let plans: Plans;
 let clock: Clock;
@@ -47,6 +49,7 @@ let boarding: Boarding;
 let cancel: Cancel;
 let noShow: NoShow;
 let service: Service;
+let demo: Demo;
 
 const STOPS: [string, string, number, number][] = [
   ["한성대입구역", "서울 성북구 동소문동", 37.5884, 127.0062],
@@ -87,7 +90,7 @@ async function seed(night: string) {
     [37.613, 127.052],
     [37.615, 127.0657],
   ];
-  for (let i = 0; i < 32; i++) {
+  for (let i = 0; i < 36; i++) {
     const [lat, lng] = homes[i % homes.length];
     const id = `rider-${i}`;
     await db.execute({
@@ -96,7 +99,7 @@ async function seed(night: string) {
     });
     await db.execute({
       sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values (?, ?, ?, ?, 'x', ?, ?)",
-      args: [`booking-${i}`, id, night, i < 20 ? "23:00" : "23:30", lat + 0.001, lng],
+      args: [`booking-${i}`, id, night, i < 20 ? "23:00" : i < 32 ? "23:30" : "01:00", lat + 0.001, lng],
     });
   }
   db.close();
@@ -112,6 +115,7 @@ before(async () => {
   boarding = (await vite.ssrLoadModule("/src/server/boarding.ts")) as Boarding;
   cancel = (await vite.ssrLoadModule("/src/server/cancel.ts")) as Cancel;
   service = (await vite.ssrLoadModule("/src/server/service.ts")) as Service;
+  demo = (await vite.ssrLoadModule("/src/server/demo.ts")) as Demo;
 });
 
 after(async () => {
@@ -122,14 +126,53 @@ after(async () => {
 const rider = (i: number) => ({ id: `rider-${i}`, email: `rider${i}@hansung.ac.kr` });
 
 describe("a night end to end", () => {
-  it("fixes the plan once booking has closed and seats everyone", async () => {
+  it("fixes each time slot an hour before it leaves and seats everyone due", async () => {
     const night = clock.tonight();
     assert.equal(await plans.ensurePlan(night), true);
     const state = await plans.loadNight(night);
     assert.ok(state.buses.length >= 1);
     assert.equal(state.seats.length, 32);
+    assert.ok(state.buses.every((bus) => bus.slot === "23:00" || bus.slot === "23:30"));
+    assert.equal(await plans.frozenUntil(night), "23:30");
     assert.equal(await plans.ensurePlan(night), true);
     assert.equal((await plans.loadNight(night)).buses.length, state.buses.length);
+  });
+
+  it("previews the later slots that are still open for booking", async () => {
+    const night = clock.tonight();
+    const preview = await plans.previewPlan(night);
+    assert.deepEqual(
+      preview.bookings.map((booking) => booking.id).sort(),
+      ["booking-32", "booking-33", "booking-34", "booking-35"],
+    );
+    assert.ok(preview.result.buses.length >= 1);
+    assert.ok(preview.result.buses.every((bus) => !plans.isFrozen("23:30", bus.slot)));
+    assert.equal(preview.result.buses.flatMap((bus) => bus.route.seats).length, 4);
+    const later = await rides.tonightFor(rider(32));
+    assert.equal(later.kind, "booked");
+    assert.ok(later.kind === "booked" && later.fixesAt === clock.slotCutoff(night, "01:00"));
+  });
+
+  it("keeps a night's preview until its bookings change", async () => {
+    const night = clock.tonight();
+    const first = await plans.previewPlan(night);
+    const db = createClient({ url });
+    const stored = await db.execute({ sql: "select input_key from plan_previews where night = ?", args: [night] });
+    assert.equal(stored.rows.length, 1);
+    const marked = { ...first.result, unplaced: ["from-cache"] };
+    await db.execute({
+      sql: "update plan_previews set result = ? where night = ?",
+      args: [JSON.stringify(marked), night],
+    });
+    assert.deepEqual((await plans.previewPlan(night)).result.unplaced, ["from-cache"]);
+
+    await db.execute({
+      sql: "update bookings set lng = lng + 0.0001 where id = 'booking-33'",
+    });
+    db.close();
+    const changed = await plans.previewPlan(night);
+    assert.ok(!changed.result.unplaced.includes("from-cache"), "a changed booking plans the night again");
+    assert.equal(changed.result.buses.flatMap((bus) => bus.route.seats).length, 4);
   });
 
   it("shows a booked student their drop-off stop", async () => {
@@ -399,5 +442,25 @@ describe("a night end to end", () => {
     assert.ok(results.filter((result) => result.ok).length <= 1);
     const after = plans.loadsOf(await plans.loadNight(night)).get(target.busId)!;
     assert.ok(after <= load + 1, `load ${after} over capacity ${load + 1}`);
+  });
+
+  it("adds demo bookings to open slots only and keeps a night that has riders", async () => {
+    const night = clock.tonight();
+    const open = await demo.openDemoSlots(night);
+    assert.ok(!open.includes("23:00") && !open.includes("23:30") && open.includes("00:00"));
+    const { added } = await demo.addDemoBookings(night, 30);
+    assert.equal(added, 30);
+    const db = createClient({ url });
+    const rows = await db.execute({
+      sql: "select b.slot from bookings b join users u on u.id = b.user_id where b.night = ? and u.demo = 1",
+      args: [night],
+    });
+    db.close();
+    assert.equal(rows.rows.length, 30);
+    assert.ok(rows.rows.every((row) => open.includes(String(row.slot))));
+    assert.equal((await demo.addDemoBookings(night, 30)).added, 30, "adding again replaces the open-slot bookings");
+
+    assert.equal(await demo.clearDemoBookings(night), 30);
+    assert.equal(await plans.hasPlan(night), true, "a night where students chose or boarded keeps its plan");
   });
 });

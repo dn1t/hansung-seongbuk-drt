@@ -19,10 +19,19 @@ import {
 import { ALL_SLOTS, kstDate, nightClock, serviceNow, slotIndex, slotsBetween, tonight } from "./clock";
 import { boardingPlace, startOfSchool, startPlaces } from "./places";
 import { nearestDistrict } from "./planner/districts";
+import { assignVehicles } from "./planner/fleet";
+import { distance } from "./planner/geo";
 import { planNight } from "./planner/plan";
-import { type PlanSettings, walkMinutes } from "./planner/settings";
+import { driveMinutes, type PlanSettings, walkMinutes } from "./planner/settings";
 import { candidateStops } from "./plans";
-import { planSettingsOf, SERVICE_LIMITS, type ServiceSettings, serviceSettings } from "./service";
+import {
+  PLAN_PRIORITIES,
+  type PlanPriority,
+  planSettingsOf,
+  SERVICE_LIMITS,
+  type ServiceSettings,
+  serviceSettings,
+} from "./service";
 
 export type ResearchFilter = "real" | "all" | "demo";
 
@@ -246,6 +255,7 @@ export interface ResearchPlanInput {
   maxRideMinutes: number;
   minRiders: number;
   foldThinSlots: boolean;
+  priority: PlanPriority;
 }
 
 export interface ResearchStop {
@@ -270,12 +280,16 @@ export interface ResearchBus {
   duration: number;
   longestRide: number;
   longestWalk: number;
+  vehicle: number;
   stops: ResearchStop[];
 }
 
 export interface ResearchPlan {
   input: ResearchPlanInput;
-  defaults: Pick<ServiceSettings, "capacity" | "maxWalkMeters" | "maxRideMinutes" | "minRiders" | "foldThinSlots">;
+  defaults: Pick<
+    ServiceSettings,
+    "capacity" | "maxWalkMeters" | "maxRideMinutes" | "minRiders" | "foldThinSlots" | "priority"
+  >;
   limits: typeof SERVICE_LIMITS;
   respondents: { real: number; demo: number };
   candidates: number;
@@ -294,8 +308,10 @@ export interface ResearchPlan {
     busMinutes: number;
     later: number;
     earlier: number;
+    fleet: number;
+    directRide: number;
   };
-  steps: { slots: number; groups: number; moved: number; merged: number; waiting: number };
+  steps: { slots: number; groups: number; moved: number; split: number; merged: number; waiting: number };
 }
 
 const clampTo = (value: number, limit: { min: number; max: number }, fallback: number) =>
@@ -312,6 +328,7 @@ export function normalizeInput(input: Partial<ResearchPlanInput>, service: Servi
     maxRideMinutes: clampTo(Number(input.maxRideMinutes), SERVICE_LIMITS.maxRideMinutes, service.maxRideMinutes),
     minRiders: Math.min(capacity, clampTo(Number(input.minRiders), SERVICE_LIMITS.minRiders, service.minRiders)),
     foldThinSlots: typeof input.foldThinSlots === "boolean" ? input.foldThinSlots : service.foldThinSlots,
+    priority: PLAN_PRIORITIES.find((value) => value === input.priority) ?? service.priority,
   };
 }
 
@@ -336,7 +353,7 @@ const MINUTE = 60_000;
 export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<ResearchPlan> {
   const service = await serviceSettings();
   const input = normalizeInput(raw, service);
-  const settings: PlanSettings = { ...planSettingsOf(service), ...input };
+  const settings: PlanSettings = planSettingsOf({ ...service, ...input });
   const window = slotsBetween(service.firstSlot, service.lastSlot);
   const [all, candidates, places] = await Promise.all([loadRespondents(), candidateStops(), startPlaces()]);
   const placeOf = new Map(places.map((place) => [place.id, place]));
@@ -363,8 +380,19 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
   const night = tonight();
 
   const rides: number[] = [];
+  const direct: number[] = [];
   const walks: number[] = [];
   let within = 0;
+  const vehicles = assignVehicles(
+    result.buses.map((bus, i) => ({
+      id: `research-${i}`,
+      departs: nightClock(night, bus.slot) / MINUTE,
+      duration: bus.route.duration,
+      first: bus.route.stops[0].place,
+      last: bus.route.stops.at(-1)!.place,
+    })),
+    settings,
+  );
   const dropStops = new Set<string>();
   const boardStops = new Set<string>();
   const buses = result.buses.map((bus, i) => {
@@ -374,6 +402,11 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
     const busWalks = bus.route.seats.map((seat) => walkMinutes(seat.walkMeters, settings));
     rides.push(...busRides);
     walks.push(...busWalks);
+    for (const seat of bus.route.seats) {
+      direct.push(
+        driveMinutes(distance(stops[seat.board].place, stops[seat.alight].place), settings) + settings.dwellMinutes,
+      );
+    }
     within += bus.route.seats.filter((seat) => seat.walkMeters <= settings.maxWalkMeters).length;
     for (const stop of stops) (stop.kind === "board" ? boardStops : dropStops).add(stop.place.id);
     return {
@@ -389,6 +422,7 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
       duration: Math.round(bus.route.duration),
       longestRide: Math.round(Math.max(0, ...busRides)),
       longestWalk: Math.max(0, ...busWalks),
+      vehicle: vehicles.vehicleOf.get(`research-${i}`) ?? 0,
       stops: stops.map((stop, seq) => ({
         name: stop.place.name,
         kind: stop.kind,
@@ -415,6 +449,7 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
       maxRideMinutes: service.maxRideMinutes,
       minRiders: service.minRiders,
       foldThinSlots: service.foldThinSlots,
+      priority: service.priority,
     },
     limits: SERVICE_LIMITS,
     respondents: { real: all.filter((row) => !row.demo).length, demo: all.filter((row) => row.demo).length },
@@ -436,6 +471,8 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
       boardStops: boardStops.size,
       seatShare: buses.length ? placed / (buses.length * settings.capacity) : 0,
       busMinutes: Math.round(buses.reduce((sum, bus) => sum + bus.duration, 0)),
+      fleet: vehicles.size,
+      directRide: average(direct),
       later: shifts.filter((shift) => shift > 0).length,
       earlier: shifts.filter((shift) => shift < 0).length,
     },

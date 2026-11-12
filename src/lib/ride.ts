@@ -57,6 +57,8 @@ export type Tonight =
   | {
       kind: "booked";
       slot: { from: number; to: number };
+      range: { from: string; to: string };
+      fixesAt?: number;
       dropOff?: { name: string; walkHome: number };
       resume: FlowParams;
     }

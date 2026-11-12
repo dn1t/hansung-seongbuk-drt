@@ -3,11 +3,13 @@ import { demoMoment, kstDate, nightOf } from "./night-time";
 
 export {
   ALL_SLOTS,
+  BOOKING_CUTOFF_MINUTES,
   isSlot,
   kstDate,
   nightClock,
   nightOf,
   SLOT_MINUTES,
+  slotCutoff,
   slotEnd,
   slotIndex,
   slotsBetween,

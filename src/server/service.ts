@@ -15,7 +15,17 @@ export interface ServiceSettings {
   dayOfCutoffMinutes: number;
   noShowLimit: number;
   foldThinSlots: boolean;
+  priority: PlanPriority;
 }
+
+export type PlanPriority = "riders" | "balanced" | "buses";
+export const PLAN_PRIORITIES: PlanPriority[] = ["riders", "balanced", "buses"];
+
+const PRIORITY_SETTINGS: Record<PlanPriority, Partial<PlanSettings>> = {
+  riders: { fleetCostMinutes: 0 },
+  balanced: {},
+  buses: { rideWeight: 0.15 },
+};
 
 export const DEFAULT_SERVICE: ServiceSettings = {
   firstSlot: "23:00",
@@ -27,6 +37,7 @@ export const DEFAULT_SERVICE: ServiceSettings = {
   dayOfCutoffMinutes: 5,
   noShowLimit: 0,
   foldThinSlots: PLAN_SETTINGS.foldThinSlots,
+  priority: "balanced",
 };
 
 export const SERVICE_LIMITS = {
@@ -59,6 +70,7 @@ export function validateService(input: ServiceSettings): string | undefined {
   }
   if (input.minRiders > input.capacity) return "최소 인원은 버스 정원보다 많을 수 없어요.";
   if (typeof input.foldThinSlots !== "boolean") return "한산한 시간대를 합칠지 다시 골라 주세요.";
+  if (!PLAN_PRIORITIES.includes(input.priority)) return "노선을 만들 때 무엇을 먼저 볼지 다시 골라 주세요.";
   return undefined;
 }
 
@@ -89,6 +101,7 @@ export function planSettingsOf(service: ServiceSettings): PlanSettings {
     maxRideMinutes: service.maxRideMinutes,
     minRiders: service.minRiders,
     foldThinSlots: service.foldThinSlots,
+    ...PRIORITY_SETTINGS[service.priority],
   };
 }
 

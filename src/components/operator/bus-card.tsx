@@ -5,8 +5,9 @@ import { formatClock } from "../../lib/time";
 import { RouteChip } from "../ride/badges";
 
 export function BusCard(props: {
-  bus: PlanBusView & { demoRiders?: number };
+  bus: Omit<PlanBusView, "fixed"> & { demoRiders?: number };
   fixed: boolean;
+  status?: "확정" | "예상";
   color?: string;
   onToggle?: (open: boolean) => void;
 }) {
@@ -35,12 +36,28 @@ export function BusCard(props: {
             )}
           </Show>
           <RouteChip name={props.bus.name} quiet />
+          <Show when={props.status}>
+            {(status) => (
+              <span
+                class={[
+                  "rounded-sm px-1.5 text-xs leading-5 font-semibold",
+                  status() === "확정" ? "bg-green-3 text-green-11" : "bg-sand-3 text-sand-11",
+                ]}
+              >
+                {status()}
+              </span>
+            )}
+          </Show>
           <PhCaretDownBold
             aria-hidden="true"
             class="ml-auto text-sm text-sand-10 transition-transform group-open:rotate-180"
           />
         </span>
         <span class="text-sm font-medium text-sand-11 tabular-nums">
+          <Show when={props.bus.vehicle > 0}>
+            <b class="font-bold text-sand-12">{props.bus.vehicle}호차</b>
+            <span class="px-1.5 text-sand-10">·</span>
+          </Show>
           {props.bus.riders}/{props.bus.capacity}명
           <Show when={props.bus.demoRiders}>{(demo) => <> (데모 {demo()}명)</>}</Show>
           <Show when={props.fixed}>

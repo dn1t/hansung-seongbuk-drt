@@ -3,6 +3,7 @@ import { respond } from "@solidjs/web";
 
 import { boardStudent } from "../server/boarding";
 import { serviceNow, tonight } from "../server/clock";
+import { DAY_OF_SETTINGS } from "../server/planner/settings";
 import { ensurePlan, loadNight, loadsOf, type LoadedBus } from "../server/plans";
 import { requireStaff } from "./staff";
 
@@ -51,6 +52,7 @@ export interface DriverStop {
   at: number;
   getOff: number;
   expected: number;
+  skip: boolean;
 }
 
 export interface DriverView {
@@ -58,6 +60,8 @@ export interface DriverView {
   bus: ReaderBus;
   stops: DriverStop[];
   unknownDropOff: number;
+  boardingDone: boolean;
+  skipped: number;
 }
 
 function summary(bus: LoadedBus, load: number, boarded: number): ReaderBus {
@@ -119,18 +123,31 @@ async function driverViewOf(busId: string): Promise<DriverView | undefined> {
     else planned.delete(choice.userId);
   }
 
-  return {
-    now: serviceNow(),
-    bus: summary(bus, loadsOf(state).get(bus.id) ?? 0, onBus.length),
-    stops: bus.stops.map((stop) => ({
+  const now = serviceNow();
+  const lastBoard = bus.stops.findLast((stop) => stop.kind === "board");
+  const boardingDone =
+    lastBoard !== undefined &&
+    now > bus.departs + (lastBoard.offset + DAY_OF_SETTINGS.boardGraceMinutes) * MINUTE &&
+    onBus.every((b) => b.alightSeq !== null);
+  const stops = bus.stops.map((stop) => {
+    const getOff = onBus.filter((b) => b.alightSeq === stop.seq).length;
+    return {
       seq: stop.seq,
       kind: stop.kind,
       name: stop.name,
       at: bus.departs + stop.offset * MINUTE,
-      getOff: onBus.filter((b) => b.alightSeq === stop.seq).length,
+      getOff,
       expected: [...planned].filter(([userId, seq]) => seq === stop.seq && !boardedUsers.has(userId)).length,
-    })),
+      skip: boardingDone && stop.kind === "alight" && getOff === 0,
+    };
+  });
+  return {
+    now,
+    bus: summary(bus, loadsOf(state).get(bus.id) ?? 0, onBus.length),
+    stops,
     unknownDropOff: onBus.filter((b) => b.alightSeq === null).length,
+    boardingDone,
+    skipped: stops.filter((stop) => stop.skip).length,
   };
 }
 

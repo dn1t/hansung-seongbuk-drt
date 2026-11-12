@@ -6,12 +6,20 @@ import { env } from "virtual:solid-env/client";
 import { Button } from "../../components/common/button";
 import { SectionRule } from "../../components/layout/screen";
 import { type NightCell, NightMonth } from "../../components/operator/night-month";
-import { announceNights, getOperatorNights, setOperatingNights } from "../../lib/operator";
+import {
+  addDemoBookings,
+  announceNights,
+  clearDemoBookings,
+  getOperatorNights,
+  type OperatorNights as NightsData,
+  setOperatingNights,
+} from "../../lib/operator";
 import { formatDate, formatNight } from "../../lib/time";
 
 const DAY = 24 * 60 * 60_000;
 const MONTHS_SHOWN = 3;
 const MAX_RANGE_DAYS = 120;
+const DEMO_DEFAULT = 160;
 
 type Status = { kind: "saved" | "error"; text: string };
 
@@ -159,7 +167,7 @@ export default function OperatorNights() {
           <header class="px-1">
             <h1 class="text-3xl font-bold">운행일</h1>
             <p class="mt-2 font-medium text-balance break-keep text-sand-11">
-              날짜를 누르면 운행일에 넣거나 빼요. 학생은 다음 날부터의 운행일을 사전 신청할 수 있어요.
+              날짜를 누르면 운행일에 넣거나 빼요. 학생은 운행일마다 탑승 1시간 전까지 사전 신청할 수 있어요.
             </p>
             <p class="mt-4 text-sm font-medium text-sand-11 tabular-nums">
               다가오는 운행일 <b class="font-bold text-sand-12">{upcoming().length}일</b>
@@ -210,6 +218,8 @@ export default function OperatorNights() {
               </div>
             </Show>
           </div>
+
+          <DemoBookings data={data()} />
 
           <SectionRule title="기간으로 넣기" class="mt-10" />
           <form
@@ -331,5 +341,164 @@ function MonthButton(props: { label: string; onClick: () => void; children: JSX.
     >
       {props.children}
     </button>
+  );
+}
+
+function DemoBookings(props: { data: NightsData }) {
+  const [night, setNight] = createSignal<string>();
+  const [count, setCount] = createSignal(String(DEMO_DEFAULT));
+  const [busy, setBusy] = createSignal<string>();
+  const [confirming, setConfirming] = createSignal<string>();
+  const [status, setStatus] = createSignal<Status>();
+
+  const open = () => props.data.nights.filter((n) => n.demoOpen);
+  const withDemo = () => props.data.nights.filter((n) => n.night >= props.data.today && n.demo > 0);
+  const target = () => {
+    const picked = night();
+    return open().some((n) => n.night === picked) ? picked : open()[0]?.night;
+  };
+  const size = () => Math.round(Number(count()));
+  const ready = () => target() !== undefined && size() >= 1 && size() <= props.data.demoMax;
+
+  async function add() {
+    const chosen = target();
+    if (!chosen) return;
+    setStatus(undefined);
+    setBusy("add");
+    const result = await addDemoBookings({ night: chosen, count: size() });
+    setBusy(undefined);
+    setStatus(
+      result.ok
+        ? {
+            kind: "saved",
+            text: `${formatNight(chosen)}에 데모 신청 ${result.added}명을 넣었어요.${
+              result.kept ? ` 노선이 정해진 시간대의 ${result.kept}명은 그대로 뒀어요.` : ""
+            }`,
+          }
+        : { kind: "error", text: result.message },
+    );
+  }
+
+  async function clear(target: string) {
+    setStatus(undefined);
+    setBusy(target);
+    const result = await clearDemoBookings(target);
+    setBusy(undefined);
+    setConfirming(undefined);
+    setStatus(
+      result.ok
+        ? { kind: "saved", text: `${formatNight(target)}의 데모 신청 ${result.removed}명을 지웠어요.` }
+        : { kind: "error", text: result.message },
+    );
+  }
+
+  return (
+    <>
+      <SectionRule title="데모 신청" class="mt-10" />
+      <p class="mt-4 px-1 font-medium text-balance break-keep text-sand-11">
+        실제 운행일에 데모 학생의 사전 신청을 넣어요. 노선과 배차가 이 신청까지 합쳐서 만들어지고, 데모 학생에게는
+        메일이 가지 않아요. 탑승 1시간 전이 지난 시간대에는 넣지 않아요.
+      </p>
+      <Show
+        when={open().length > 0}
+        fallback={<p class="mt-3 px-1 font-medium break-keep text-sand-11">신청을 넣을 수 있는 운행일이 없어요.</p>}
+      >
+        <form
+          class="mt-4 flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void add();
+          }}
+        >
+          <label class="flex flex-col gap-y-1.5">
+            <span class="ml-1 text-sm font-semibold text-sand-11">운행일</span>
+            <select
+              class="h-13 cursor-pointer rounded-xl border border-sand-5 bg-sand-2 px-4 text-lg tabular-nums focus:border-amber-8 focus:ring-2 focus:ring-amber-5 focus:outline-none"
+              onChange={(e) => setNight(e.currentTarget.value)}
+            >
+              <For each={open()} keyed={(n) => n.night}>
+                {(n) => (
+                  <option value={n().night} selected={n().night === target()}>
+                    {formatNight(n().night)}
+                    {n().demo > 0 ? ` · 데모 ${n().demo}명` : ""}
+                  </option>
+                )}
+              </For>
+            </select>
+          </label>
+          <label class="flex w-32 flex-col gap-y-1.5">
+            <span class="ml-1 text-sm font-semibold text-sand-11">학생 수</span>
+            <span class="flex h-13 items-center rounded-xl border border-sand-5 bg-sand-2 pr-4 focus-within:border-amber-8 focus-within:ring-2 focus-within:ring-amber-5">
+              <input
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max={props.data.demoMax}
+                step="1"
+                required
+                value={count()}
+                class="h-full min-w-0 flex-1 rounded-xl bg-transparent px-4 text-lg tabular-nums caret-amber-9 focus:outline-none"
+                onInput={(e) => setCount(e.currentTarget.value)}
+              />
+              <span class="shrink-0 font-semibold text-sand-11">명</span>
+            </span>
+          </label>
+          <Button
+            type="submit"
+            class="w-36"
+            variant={busy() === "add" ? "loading" : ready() ? "secondary" : "disabled"}
+          >
+            신청 넣기
+          </Button>
+        </form>
+        <p class="mt-3 px-1 text-sm font-medium break-keep text-sand-11">
+          이미 데모 신청이 있는 날은 아직 마감되지 않은 시간대의 신청을 새로 바꿔요.
+        </p>
+      </Show>
+      <Show when={withDemo().length > 0}>
+        <ul class="mt-4 flex flex-col">
+          <For each={withDemo()} keyed={(n) => n.night}>
+            {(n) => (
+              <li class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-sand-4 px-1 py-2.5 last:border-b-0">
+                <span class="font-semibold tabular-nums">{formatNight(n().night)}</span>
+                <span class="text-sm font-medium text-sand-11 tabular-nums">
+                  신청 {n().bookings}명 중 데모 {n().demo}명
+                </span>
+                <span class="ml-auto flex items-center gap-x-3 text-sm font-semibold">
+                  <Show
+                    when={confirming() === n().night}
+                    fallback={
+                      <button type="button" class="cursor-pointer text-red-11" onClick={() => setConfirming(n().night)}>
+                        데모 신청 지우기
+                      </button>
+                    }
+                  >
+                    <span class="text-sand-12">데모 {n().demo}명의 신청을 지울까요?</span>
+                    <button
+                      type="button"
+                      class="cursor-pointer text-red-11 disabled:cursor-progress"
+                      disabled={busy() === n().night}
+                      onClick={() => void clear(n().night)}
+                    >
+                      지우기
+                    </button>
+                    <button type="button" class="cursor-pointer text-sand-11" onClick={() => setConfirming(undefined)}>
+                      취소
+                    </button>
+                  </Show>
+                </span>
+              </li>
+            )}
+          </For>
+        </ul>
+      </Show>
+      <p role="status" class="mt-2 min-h-6 px-1 font-semibold break-keep">
+        <Show when={status()}>
+          {(current) => (
+            <span class={current().kind === "saved" ? "text-green-11" : "text-red-11"}>{current().text}</span>
+          )}
+        </Show>
+      </p>
+    </>
   );
 }

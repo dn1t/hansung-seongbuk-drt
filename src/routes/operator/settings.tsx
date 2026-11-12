@@ -5,7 +5,7 @@ import { env } from "virtual:solid-env/client";
 
 import { Button } from "../../components/common/button";
 import { SectionRule } from "../../components/layout/screen";
-import { getOperatorService, saveOperatorService } from "../../lib/operator";
+import { getOperatorService, type PlanPriority, saveOperatorService } from "../../lib/operator";
 import { slotRange } from "../../lib/time";
 
 type Field =
@@ -17,8 +17,15 @@ type Field =
   | "minRiders"
   | "dayOfCutoffMinutes"
   | "noShowLimit"
-  | "foldThinSlots";
+  | "foldThinSlots"
+  | "priority";
 type Status = { kind: "saved" | "error"; text: string };
+
+const PRIORITY_OPTIONS: [PlanPriority, string, string][] = [
+  ["riders", "학생 먼저", "버스 수가 늘어도 학생이 돌아가는 길을 최대한 줄여요."],
+  ["balanced", "균형", "학생이 덜 돌아가게 하면서, 운행을 마친 버스를 다시 투입해 실제 버스 대수를 줄여요."],
+  ["buses", "버스 대수 먼저", "한 버스에 학생을 많이 태워 대수를 줄여요. 학생은 더 오래 탈 수 있어요."],
+];
 
 const walkMinutes = (meters: number) => Math.max(1, Math.ceil((meters * 1.3) / 75));
 
@@ -52,6 +59,7 @@ export default function OperatorSettings() {
       dayOfCutoffMinutes: Number(value("dayOfCutoffMinutes")),
       noShowLimit: Number(value("noShowLimit")),
       foldThinSlots: value("foldThinSlots") === "true",
+      priority: value("priority") as PlanPriority,
     });
     setBusy(false);
     if (result.ok) setDraft({});
@@ -163,6 +171,31 @@ export default function OperatorSettings() {
                 hint="한 학생이 버스에 타 있는 시간이 이보다 길어지면 버스를 나눠요."
               />
             </div>
+
+            <fieldset class="mt-8">
+              <legend class="ml-1 text-sm font-semibold text-sand-11">노선을 만들 때 먼저 볼 것</legend>
+              <div role="radiogroup" class="mt-1.5 grid gap-2 sm:grid-cols-3">
+                <For each={PRIORITY_OPTIONS}>
+                  {([key, title, detail]) => (
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={value("priority") === key ? "true" : "false"}
+                      class={[
+                        "flex cursor-pointer flex-col gap-y-0.5 rounded-xl border px-4 py-3 text-start transition-colors",
+                        value("priority") === key
+                          ? "border-amber-8 bg-amber-2 ring-2 ring-amber-5"
+                          : "border-sand-5 bg-sand-2 hover:bg-sand-3",
+                      ]}
+                      onClick={() => set("priority", key)}
+                    >
+                      <span class="font-semibold">{title}</span>
+                      <span class="text-sm font-medium break-keep text-sand-11">{detail}</span>
+                    </button>
+                  )}
+                </For>
+              </div>
+            </fieldset>
 
             <label class="mt-6 flex cursor-pointer items-start gap-x-3 px-1">
               <input

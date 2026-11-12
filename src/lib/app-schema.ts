@@ -60,7 +60,15 @@ export const plans = sqliteTable("plans", {
   settings: text("settings", { mode: "json" }).notNull(),
   riders: integer("riders").notNull(),
   unplaced: integer("unplaced").notNull(),
+  frozenUntil: text("frozen_until"),
   createdAt: createdAt(),
+});
+
+export const planPreviews = sqliteTable("plan_previews", {
+  night: text("night").primaryKey(),
+  inputKey: text("input_key").notNull(),
+  result: text("result", { mode: "json" }).notNull(),
+  updatedAt: integer("updated_at").notNull(),
 });
 
 export const buses = sqliteTable(

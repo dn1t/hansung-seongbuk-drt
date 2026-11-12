@@ -3,13 +3,14 @@ import { useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal, Errored, Loading, Show } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
+import { BookingRouteCard } from "../../../../components/booking/booking-route";
 import { MissingBooking } from "../../../../components/booking/missing-booking";
 import { Button } from "../../../../components/common/button";
 import { ActionRow, LinkRow, SavedNotice } from "../../../../components/common/list-row";
 import { Sheet } from "../../../../components/common/sheet";
 import { Header } from "../../../../components/layout/screen";
 import { type Booking, cancelBooking, getBookingOverview } from "../../../../lib/booking";
-import { formatNight, slotRange } from "../../../../lib/time";
+import { formatClock, formatNight, slotRange } from "../../../../lib/time";
 
 const SAVED_NOTICES: Record<string, string> = {
   time: "시간을 바꿨어요.",
@@ -69,8 +70,8 @@ export default function BookingDetail() {
                   title={`${formatNight(current().night)} 밤`}
                   description={
                     current().locked
-                      ? "신청이 마감돼서 시간과 가는 곳은 바꿀 수 없어요. 못 타게 되면 취소해 주세요."
-                      : "시간이나 가는 곳을 바꿀 수 있어요. 날짜를 바꾸려면 이 신청을 취소하고 새로 신청해 주세요."
+                      ? "탑승 1시간 전이 지나 노선이 정해졌어요. 시간과 가는 곳은 바꿀 수 없고, 못 타게 되면 취소해 주세요."
+                      : `${formatClock(current().closesAt)}까지 시간이나 가는 곳을 바꿀 수 있어요. 날짜를 바꾸려면 이 신청을 취소하고 새로 신청해 주세요.`
                   }
                   onBackClick={() => nav("/booking")}
                 />
@@ -90,7 +91,8 @@ export default function BookingDetail() {
                     divided
                   />
                 </ul>
-                <ul class="mt-3 overflow-hidden rounded-2xl bg-sand-2">
+                <BookingRouteCard id={current().id} home={current().isHome ? "집" : current().address} />
+                <ul class="mt-8 overflow-hidden rounded-2xl bg-sand-2">
                   <ActionRow
                     icon={<PhXCircleBold />}
                     title="이 날 신청 취소하기"

@@ -31,33 +31,47 @@ export interface Route {
   seats: RouteSeat[];
   duration: number;
   longestRide: number;
+  rideTotal: number;
 }
 
 export interface Coverage {
   candidates: Place[];
   near: Map<string, number[]>;
+  nearMeters: Map<string, number[]>;
   walks: Map<string, Map<number, number>>;
   legs: Map<number, number>;
+  tally: { count: Int32Array; walk: Float64Array };
 }
 
 type Home = { id: string; home: Point };
 
 export function coverageOf(riders: Home[], candidates: Place[], maxWalkMeters: number) {
   const near = new Map<string, number[]>();
+  const nearMeters = new Map<string, number[]>();
   const walks = new Map<string, Map<number, number>>();
   for (const rider of riders) {
     const list: number[] = [];
+    const lengths: number[] = [];
     const meters = new Map<number, number>();
     candidates.forEach((stop, i) => {
       const d = distance(stop, rider.home);
       if (d > maxWalkMeters) return;
       list.push(i);
+      lengths.push(d);
       meters.set(i, d);
     });
     near.set(rider.id, list);
+    nearMeters.set(rider.id, lengths);
     walks.set(rider.id, meters);
   }
-  return { candidates, near, walks, legs: new Map() } satisfies Coverage;
+  return {
+    candidates,
+    near,
+    nearMeters,
+    walks,
+    legs: new Map(),
+    tally: { count: new Int32Array(candidates.length), walk: new Float64Array(candidates.length) },
+  } satisfies Coverage;
 }
 
 function walkTo(coverage: Coverage, rider: Home, i: number) {
@@ -84,23 +98,30 @@ export function chooseDropOffs(riders: Home[], coverage: Coverage) {
   const uncovered = new Set(riders.filter((r) => (coverage.near.get(r.id) ?? []).length > 0));
   const chosen = new Set<number>();
 
+  const { count, walk } = coverage.tally;
   while (uncovered.size > 0) {
-    const gain = new Map<number, { count: number; walk: number }>();
+    const touched: number[] = [];
     for (const rider of uncovered) {
-      for (const i of coverage.near.get(rider.id)!) {
-        let entry = gain.get(i);
-        if (!entry) gain.set(i, (entry = { count: 0, walk: 0 }));
-        entry.count += 1;
-        entry.walk += walkTo(coverage, rider, i);
+      const list = coverage.near.get(rider.id)!;
+      const lengths = coverage.nearMeters.get(rider.id)!;
+      for (let k = 0; k < list.length; k++) {
+        const i = list[k];
+        if (count[i] === 0) touched.push(i);
+        count[i] += 1;
+        walk[i] += lengths[k];
       }
     }
     let best = -1;
-    let bestGain = { count: 0, walk: Infinity };
-    for (const [i, entry] of gain) {
-      if (entry.count > bestGain.count || (entry.count === bestGain.count && entry.walk < bestGain.walk)) {
+    let bestCount = 0;
+    let bestWalk = Infinity;
+    for (const i of touched) {
+      if (count[i] > bestCount || (count[i] === bestCount && walk[i] < bestWalk)) {
         best = i;
-        bestGain = entry;
+        bestCount = count[i];
+        bestWalk = walk[i];
       }
+      count[i] = 0;
+      walk[i] = 0;
     }
     chosen.add(best);
     for (const rider of uncovered) {
@@ -322,10 +343,12 @@ export function buildRoute(riders: RouteRider[], coverage: Coverage, settings: P
     };
   });
 
+  const rides = seats.map((s) => stops[s.alight].offset - stops[s.board].offset);
   return {
     stops,
     seats,
     duration: stops.at(-1)!.offset,
-    longestRide: Math.max(...seats.map((s) => stops[s.alight].offset - stops[s.board].offset)),
+    longestRide: Math.max(...rides),
+    rideTotal: rides.reduce((sum, ride) => sum + ride, 0),
   };
 }

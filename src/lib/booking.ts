@@ -1,15 +1,17 @@
 import { query } from "@solidjs/router";
 import { respond } from "@solidjs/web";
-import { and, asc, eq, gt, gte } from "drizzle-orm";
+import { and, asc, eq, gte } from "drizzle-orm";
 
 import { cancelBookingFor } from "../server/cancel";
-import { kstToday } from "../server/clock";
+import { serviceNow, slotCutoff, tonight } from "../server/clock";
 import { searchKakaoAddress } from "../server/kakao";
 import { bookingBlock } from "../server/no-show";
+import { refreshPreviews, routeCounts } from "../server/plans";
 import { serviceSlots } from "../server/service";
 import { ADDRESS_DETAIL_MAX_LENGTH } from "./address";
 import { bookings, operatingNights } from "./app-schema";
 import { db } from "./db";
+import { getBookingRoute, getNightRoutes } from "./night-routes";
 import { requireUserId } from "./profile";
 import { users } from "./schema";
 
@@ -21,11 +23,13 @@ export interface Booking {
   addressDetail: string | null;
   isHome: boolean;
   locked: boolean;
+  closesAt: number;
 }
 
 export interface BookingOverview {
   nights: string[];
   slots: string[];
+  openSlots: Record<string, string[]>;
   bookings: Booking[];
   home: { address: string; detail: string | null } | null;
   blocked?: string;
@@ -39,13 +43,27 @@ export type BookingAddressChoice =
   | { kind: "other"; address: string; detail: string };
 
 async function openNights() {
-  const rows = await db
-    .select({ night: operatingNights.night })
-    .from(operatingNights)
-    .where(gt(operatingNights.night, kstToday()))
-    .orderBy(asc(operatingNights.night));
-  return rows.map((row) => row.night);
+  const [rows, slots] = await Promise.all([
+    db
+      .select({ night: operatingNights.night })
+      .from(operatingNights)
+      .where(gte(operatingNights.night, tonight()))
+      .orderBy(asc(operatingNights.night)),
+    serviceSlots(),
+  ]);
+  const now = serviceNow();
+  const openSlots: Record<string, string[]> = {};
+  const nights: string[] = [];
+  for (const { night } of rows) {
+    const open = slots.filter((slot) => slotCutoff(night, slot) > now);
+    if (open.length === 0) continue;
+    nights.push(night);
+    if (open.length < slots.length) openSlots[night] = open;
+  }
+  return { nights, openSlots, slots };
 }
+
+const isOpen = (night: string, slot: string) => slotCutoff(night, slot) > serviceNow();
 
 type PlaceLookup =
   | { ok: true; place: { address: string; detail: string | null; lat: number; lng: number } }
@@ -73,20 +91,20 @@ export const getBookingOverview = query(async (): Promise<BookingOverview> => {
   "use server";
   const userId = await requireUserId();
   const home = await homeOf(userId);
-  const [rows, nights, slots, blocked] = await Promise.all([
+  const [rows, { nights, openSlots, slots }, blocked] = await Promise.all([
     db
       .select()
       .from(bookings)
-      .where(and(eq(bookings.userId, userId), gte(bookings.night, kstToday())))
+      .where(and(eq(bookings.userId, userId), gte(bookings.night, tonight())))
       .orderBy(asc(bookings.night)),
     openNights(),
-    serviceSlots(),
     bookingBlock(userId),
   ]);
   return {
     blocked,
     nights,
     slots,
+    openSlots,
     bookings: rows.map((row) => ({
       id: row.id,
       night: row.night,
@@ -94,11 +112,22 @@ export const getBookingOverview = query(async (): Promise<BookingOverview> => {
       address: row.address,
       addressDetail: row.addressDetail,
       isHome: row.address === home?.address && row.addressDetail === home?.detail,
-      locked: row.night <= kstToday(),
+      locked: !isOpen(row.night, row.slot),
+      closesAt: slotCutoff(row.night, row.slot),
     })),
     home: home && { address: home.address, detail: home.detail },
   };
 }, "booking-overview");
+
+const SLOT_ROUTE_NIGHTS = 14;
+
+export const getSlotRoutes = query(async (nights: string[]): Promise<Record<string, Record<string, number>>> => {
+  "use server";
+  await requireUserId();
+  const open = new Set((await openNights()).nights);
+  const wanted = [...new Set(nights)].filter((night) => open.has(night)).slice(0, SLOT_ROUTE_NIGHTS);
+  return Object.fromEntries(await Promise.all(wanted.map(async (night) => [night, await routeCounts(night)])));
+}, "slot-routes");
 
 export async function createBookings(input: {
   nights: string[];
@@ -106,20 +135,26 @@ export async function createBookings(input: {
   address: { address: string; detail: string } | null;
 }): Promise<BookingResult> {
   "use server";
-  const done = (result: BookingResult) => respond(result, { revalidate: [getBookingOverview.key] });
+  const done = (result: BookingResult) =>
+    respond(result, {
+      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key],
+    });
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });
 
   const blocked = await bookingBlock(userId);
   if (blocked) return done({ ok: false, message: blocked });
 
-  const open = new Set(await openNights());
+  const open = await openNights();
   const nights = [...new Set(input.nights)];
-  if (nights.length === 0 || nights.some((night) => !open.has(night))) {
+  if (nights.length === 0 || nights.some((night) => !open.nights.includes(night))) {
     return done({ ok: false, message: "신청할 수 없는 날이 섞여 있어요. 날짜를 다시 골라 주세요." });
   }
-  if (!(await serviceSlots()).includes(input.slot)) {
+  if (!open.slots.includes(input.slot)) {
     return done({ ok: false, message: "시간을 다시 골라 주세요." });
+  }
+  if (nights.some((night) => !isOpen(night, input.slot))) {
+    return done({ ok: false, message: "탑승 1시간 전이 지난 시간이에요. 더 늦은 시간을 골라 주세요." });
   }
 
   try {
@@ -146,6 +181,7 @@ export async function createBookings(input: {
         .values({ userId, night, ...values })
         .onConflictDoUpdate({ target: [bookings.userId, bookings.night], set: values });
     }
+    refreshPreviews(nights);
     return done({ ok: true, count: nights.length });
   } catch (err) {
     console.error("createBookings:", err);
@@ -159,7 +195,10 @@ export async function updateBooking(input: {
   address: BookingAddressChoice;
 }): Promise<BookingResult> {
   "use server";
-  const done = (result: BookingResult) => respond(result, { revalidate: [getBookingOverview.key] });
+  const done = (result: BookingResult) =>
+    respond(result, {
+      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key],
+    });
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });
   if (!(await serviceSlots()).includes(input.slot)) return done({ ok: false, message: "시간을 다시 골라 주세요." });
@@ -170,8 +209,14 @@ export async function updateBooking(input: {
       .from(bookings)
       .where(and(eq(bookings.id, input.id), eq(bookings.userId, userId)))
       .limit(1);
-    if (!booking || booking.night <= kstToday()) {
-      return done({ ok: false, message: "바꿀 수 없는 신청이에요. 사전 신청 목록에서 다시 확인해 주세요." });
+    if (!booking || !isOpen(booking.night, booking.slot)) {
+      return done({
+        ok: false,
+        message: "탑승 1시간 전이 지나서 바꿀 수 없어요. 못 타게 되면 취소해 주세요.",
+      });
+    }
+    if (!isOpen(booking.night, input.slot)) {
+      return done({ ok: false, message: "탑승 1시간 전이 지난 시간이에요. 더 늦은 시간을 골라 주세요." });
     }
 
     let place: { address: string; detail: string | null; lat: number; lng: number } | null = null;
@@ -191,6 +236,7 @@ export async function updateBooking(input: {
         ...(place && { address: place.address, addressDetail: place.detail, lat: place.lat, lng: place.lng }),
       })
       .where(and(eq(bookings.id, input.id), eq(bookings.userId, userId)));
+    refreshPreviews([booking.night]);
     return done({ ok: true, count: 1 });
   } catch (err) {
     console.error("updateBooking:", err);
@@ -200,7 +246,10 @@ export async function updateBooking(input: {
 
 export async function cancelBooking(id: string): Promise<BookingResult> {
   "use server";
-  const done = (result: BookingResult) => respond(result, { revalidate: [getBookingOverview.key] });
+  const done = (result: BookingResult) =>
+    respond(result, {
+      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key],
+    });
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });
   try {

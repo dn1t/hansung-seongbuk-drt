@@ -67,7 +67,7 @@ Login hashes passwords with scrypt and route planning takes tens of milliseconds
 Demo riders are flagged `users.demo` and every operator screen counts them apart from real students. They can also be made or cleared from /operator/survey without the script.
 
 1. Point `TURSO_CONNECTION_URL` at a local file (`file:local.db`), run `pnpm migrate`, then `pnpm seed:demo`, and start the app with `NODE_SSR=1 pnpm dev`. When `DEMO_TIME` has a date, the seed fills that night. The seed refuses a remote database unless you pass `--remote`. `--night 2026-12-08` and `--riders 200` pick another night and size, and `--days 5` fills that many nights in a row (riders keep the same homes, about 85% ride each night); `--student` also creates a student you can log in as (`demo.student@hansung.ac.kr` / `drtdemo2026`, or `--email` / `--password`) with a booking tonight and booking emails turned off. `--clear` removes the demo riders and that student.
-2. Sign up as a student (school email, code, name and password, home address, then the 이용 계획 survey) and book an upcoming night. Booking closes at midnight before each night, and the night's plan is fixed the first time anyone opens it after that. To show a night's buses during the day, set `DEMO_TIME`.
+2. Sign up as a student (school email, code, name and password, home address, then the 이용 계획 survey) and book an upcoming night. Each slot's booking closes 1 hour before it leaves, and its routes are fixed the first time anyone opens the night after that; later slots stay a preview. To show a night's buses during the day, set `DEMO_TIME`.
 3. Open /operator with `STAFF_CODE`:
    - 노선 shows the generated plan.
    - 탑승 확인 is the QR reader for a phone. It needs HTTPS for the camera.
@@ -79,7 +79,7 @@ For running a night step by step (in Korean), see [docs/operator-guide.md](docs/
 
 ## Where things live
 
-- `src/server/planner/`: the route planner (thin-slot folding, sweep grouping by home direction, rider trades between buses of a slot, set-cover stops refined against bus detours, nearest neighbor + 2-opt, small-group merging, departure adjustment). Pure TypeScript with tests.
+- `src/server/planner/`: the route planner (thin-slot folding, sweep grouping by home direction, rider trades and splits that weigh ride time against bus time, set-cover stops refined against bus detours, nearest neighbor + 2-opt, small-group merging, departure adjustment) and `fleet.ts`, which chains runs into vehicles when a bus can get back within 30 minutes. Pure TypeScript with tests.
 - `src/server/plans.ts`: builds, stores, and loads each night's plan.
 - `src/server/rides.ts`: what the student sees tonight, the bus options, and choosing a bus.
 - `src/server/boarding.ts` and `src/server/qr-sign.ts`: checking a scanned QR and recording the boarding; `src/lib/boarding.ts` exposes them to the reader and driver screens.

@@ -126,8 +126,8 @@ describe("planNight", () => {
   const result = planNight({ slots: SLOTS, riders: input, candidates, settings: PLAN_SETTINGS });
 
   it("counts the steps it took", () => {
-    assert.ok(result.steps.groups >= result.buses.length);
-    assert.equal(result.steps.groups - result.steps.merged, result.buses.length);
+    assert.ok(result.steps.groups > 0 && result.steps.split >= 0);
+    assert.equal(result.steps.groups + result.steps.split - result.steps.merged, result.buses.length);
     assert.ok(result.steps.moved >= 0);
   });
 
@@ -219,12 +219,13 @@ describe("planNight", () => {
       ...group("23:30", north, 12),
       ...group("23:30", east, 18),
     ];
-    const folded = planNight({ slots: SLOTS, riders: thin, candidates, settings: PLAN_SETTINGS });
+    const eager = { ...PLAN_SETTINGS, minRiders: 6, lateShiftMinutes: 1, rideWeight: 0, fleetCostMinutes: 0 };
+    const folded = planNight({ slots: SLOTS, riders: thin, candidates, settings: eager });
     const apart = planNight({
       slots: SLOTS,
       riders: thin,
       candidates,
-      settings: { ...PLAN_SETTINGS, foldThinSlots: false, minRiders: 1 },
+      settings: { ...eager, foldThinSlots: false },
     });
 
     assert.deepEqual([...new Set(folded.buses.map((b) => b.slot))], ["23:30"]);
@@ -254,6 +255,22 @@ describe("planNight", () => {
     });
     const minutes = (plan: typeof result) => plan.buses.reduce((sum, b) => sum + b.route.duration, 0);
     assert.ok(minutes(result) <= minutes(plain), `${minutes(result)} > ${minutes(plain)}`);
+  });
+
+  it("keeps rides closer to a direct trip than packing buses first", () => {
+    const average = (plan: typeof result) => {
+      const rides = plan.buses.flatMap((bus) =>
+        bus.route.seats.map((seat) => bus.route.stops[seat.alight].offset - bus.route.stops[seat.board].offset),
+      );
+      return rides.reduce((sum, ride) => sum + ride, 0) / rides.length;
+    };
+    const packed = planNight({
+      slots: SLOTS,
+      riders: input,
+      candidates,
+      settings: { ...PLAN_SETTINGS, rideWeight: 0, minRiders: 10 },
+    });
+    assert.ok(average(result) < average(packed), `${average(result)} >= ${average(packed)}`);
   });
 
   it("plans nothing without stops", () => {

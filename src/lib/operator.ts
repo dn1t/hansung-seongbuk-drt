@@ -7,6 +7,7 @@ import { ALL_SLOTS, kstToday, nightClock, slotsBetween, tonight } from "../serve
 import { searchKakaoKeyword } from "../server/kakao";
 import { expectedRiders } from "../server/no-show";
 import { SCHOOL_PLACES } from "../server/places";
+import { assignVehicles } from "../server/planner/fleet";
 import { centroid } from "../server/planner/geo";
 import { distance } from "../server/planner/geo";
 import { PLAN_SETTINGS, walkMinutes } from "../server/planner/settings";
@@ -35,6 +36,8 @@ import { accounts, users } from "./schema";
 import { requireStaff } from "./staff";
 import { formatNight } from "./time";
 
+export type { PlanPriority } from "../server/service";
+
 export const STOP_NAME_MAX_LENGTH = 40;
 const NIGHT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const SERVICE_AREA = { minLat: 37.4, maxLat: 37.75, minLng: 126.75, maxLng: 127.25 };
@@ -42,6 +45,8 @@ const SERVICE_AREA = { minLat: 37.4, maxLat: 37.75, minLng: 126.75, maxLng: 127.
 export interface OperatorNight {
   night: string;
   bookings: number;
+  demo: number;
+  demoOpen: boolean;
 }
 
 export interface OperatorNights {
@@ -49,6 +54,60 @@ export interface OperatorNights {
   nights: OperatorNight[];
   unannounced: string[];
   recipients: number;
+  demoMax: number;
+}
+
+export async function addDemoBookings(input: {
+  night: string;
+  count: number;
+}): Promise<OperatorResult & { added?: number; kept?: number }> {
+  "use server";
+  const done = (result: OperatorResult & { added?: number; kept?: number }) =>
+    respond(result, { revalidate: [getOperatorNights.key, getOperatorPlan.key] });
+  try {
+    await requireStaff();
+  } catch {
+    return done({ ok: false, message: "운영자 코드를 다시 입력해 주세요." });
+  }
+  const [{ DEMO_MAX }, demo] = await Promise.all([import("../server/demo-data"), import("../server/demo")]);
+  const size = Math.round(Number(input.count));
+  if (!Number.isFinite(size) || size < 1 || size > DEMO_MAX) {
+    return done({ ok: false, message: `데모 학생은 1–${DEMO_MAX}명으로 정해 주세요.` });
+  }
+  if (!NIGHT_PATTERN.test(input.night) || input.night < tonight() || !(await isOperatingNight(input.night))) {
+    return done({ ok: false, message: "다가오는 운행일을 골라 주세요." });
+  }
+  if ((await demo.openDemoSlots(input.night)).length === 0) {
+    return done({ ok: false, message: "이날은 모든 시간대의 신청이 마감됐어요." });
+  }
+  try {
+    const { added, kept } = await demo.addDemoBookings(input.night, size);
+    return done({ ok: true, added, kept });
+  } catch (err) {
+    console.error("addDemoBookings:", err);
+    return done({ ok: false, message: "데모 신청을 넣지 못했어요. 다시 시도해 주세요." });
+  }
+}
+
+export async function clearDemoBookings(night: string): Promise<OperatorResult & { removed?: number }> {
+  "use server";
+  const done = (result: OperatorResult & { removed?: number }) =>
+    respond(result, { revalidate: [getOperatorNights.key, getOperatorPlan.key] });
+  try {
+    await requireStaff();
+  } catch {
+    return done({ ok: false, message: "운영자 코드를 다시 입력해 주세요." });
+  }
+  if (!NIGHT_PATTERN.test(night) || night < tonight()) {
+    return done({ ok: false, message: "다가오는 운행일만 지울 수 있어요." });
+  }
+  try {
+    const { clearDemoBookings: clear } = await import("../server/demo");
+    return done({ ok: true, removed: await clear(night) });
+  } catch (err) {
+    console.error("clearDemoBookings:", err);
+    return done({ ok: false, message: "데모 신청을 지우지 못했어요. 다시 시도해 주세요." });
+  }
 }
 
 export interface Stop {
@@ -65,19 +124,38 @@ export const getOperatorNights = query(async (): Promise<OperatorNights> => {
   "use server";
   await requireStaff();
   const today = kstToday();
-  const [nights, counts, recipients] = await Promise.all([
+  const [nights, counts, recipients, { DEMO_MAX }, { openDemoSlots }] = await Promise.all([
     db.select().from(operatingNights).orderBy(asc(operatingNights.night)),
     db
-      .select({ night: bookings.night, total: count() })
+      .select({
+        night: bookings.night,
+        total: count(),
+        demo: sql<number>`sum(case when ${users.demo} then 1 else 0 end)`,
+      })
       .from(bookings)
+      .innerJoin(users, eq(users.id, bookings.userId))
       .where(gte(bookings.night, today))
       .groupBy(bookings.night),
     announceRecipients(),
+    import("../server/demo-data"),
+    import("../server/demo"),
   ]);
-  const totals = new Map(counts.map((row) => [row.night, row.total]));
+  const totals = new Map(counts.map((row) => [row.night, row]));
+  const upcoming = nights.filter((row) => row.night >= tonight());
+  const open = new Set(
+    (
+      await Promise.all(upcoming.map(async (row) => ((await openDemoSlots(row.night)).length > 0 ? row.night : "")))
+    ).filter(Boolean),
+  );
   return {
     today,
-    nights: nights.map((row) => ({ night: row.night, bookings: totals.get(row.night) ?? 0 })),
+    demoMax: DEMO_MAX,
+    nights: nights.map((row) => ({
+      night: row.night,
+      bookings: totals.get(row.night)?.total ?? 0,
+      demo: Number(totals.get(row.night)?.demo ?? 0),
+      demoOpen: open.has(row.night),
+    })),
     unannounced: nights.filter((row) => row.night > today && row.announcedAt === null).map((row) => row.night),
     recipients: recipients.length,
   };
@@ -296,6 +374,7 @@ export interface PlanBusView {
   key: string;
   slot: string;
   name: string;
+  fixed: boolean;
   departs: number;
   plannedDeparts: number;
   riders: number;
@@ -303,6 +382,7 @@ export interface PlanBusView {
   capacity: number;
   duration: number;
   longestWalk: number;
+  vehicle: number;
   stops: PlanStopView[];
 }
 
@@ -310,15 +390,17 @@ export interface OperatorPlan {
   night: string;
   tonight: string;
   nights: string[];
-  status: "fixed" | "preview" | "none";
+  status: "fixed" | "partial" | "preview" | "none";
   canRebuild: boolean;
   candidates: number;
   booked: number;
+  demo: number;
   unplaced: number;
   averageWalk: number;
   boarded: number;
   dayOf: number;
   expected: number;
+  fleet: number;
   buses: PlanBusView[];
 }
 
@@ -356,100 +438,127 @@ export const getOperatorPlan = query(async (requested: string): Promise<Operator
     nights,
     candidates,
     booked: 0,
+    demo: 0,
     unplaced: 0,
     averageWalk: 0,
     boarded: 0,
     dayOf: 0,
     expected: 0,
+    fleet: 0,
     buses: [],
     canRebuild: false,
   };
   if (!(await hasPlan(night)) && !(await isOperatingNight(night))) return { ...empty, status: "none" };
 
   await ensurePlan(night);
-  if (await hasPlan(night)) {
-    const state = await loadNight(night);
-    const homes = new Map(
-      (await db.select().from(bookings).where(eq(bookings.night, night))).map((b) => [
-        b.id,
-        { lat: b.lat, lng: b.lng },
-      ]),
-    );
-    const loads = loadsOf(state);
-    const walks: number[] = [];
-    const buses = state.buses.map((bus) => {
-      const seats = state.seats.filter((s) => s.busId === bus.id);
-      const busWalks = seats.flatMap((seat) => {
-        const home = homes.get(seat.bookingId);
-        const stop = bus.stops.find((s) => s.seq === seat.alightSeq);
-        return home && stop ? [walkMinutes(distance(home, stop), PLAN_SETTINGS)] : [];
-      });
-      walks.push(...busWalks);
-      return {
-        key: bus.id,
-        slot: bus.slot,
-        name: bus.name,
-        departs: bus.departs,
-        plannedDeparts: bus.plannedDeparts,
-        riders: loads.get(bus.id) ?? 0,
-        boarded: state.boardings.filter((b) => b.busId === bus.id).length,
-        capacity: bus.capacity,
-        duration: bus.stops.at(-1)?.offset ?? 0,
-        longestWalk: Math.max(0, ...busWalks),
-        stops: bus.stops.map((stop) => ({
-          name: stop.name,
-          kind: stop.kind,
-          at: bus.departs + stop.offset * MINUTE,
-          riders: seats.filter((s) => (stop.kind === "board" ? s.boardSeq : s.alightSeq) === stop.seq).length,
-        })),
-      };
-    });
-    return {
-      ...empty,
-      status: "fixed",
-      canRebuild: night >= tonight() && !(await hasActivity(night)),
-      booked: homes.size,
-      unplaced: homes.size - state.seats.length,
-      averageWalk: walks.length ? walks.reduce((a, b) => a + b, 0) / walks.length : 0,
-      boarded: state.boardings.length,
-      dayOf: state.choices.length,
-      expected: await expectedRiders([...new Set(state.seats.map((seat) => seat.userId))]),
-      buses,
-    };
-  }
+  const planned = await hasPlan(night);
+  const [state, preview, homeRows] = await Promise.all([
+    loadNight(night),
+    previewPlan(night),
+    db
+      .select({ id: bookings.id, userId: bookings.userId, lat: bookings.lat, lng: bookings.lng, demo: users.demo })
+      .from(bookings)
+      .innerJoin(users, eq(users.id, bookings.userId))
+      .where(eq(bookings.night, night)),
+  ]);
+  const homes = new Map(homeRows.map((b) => [b.id, { lat: b.lat, lng: b.lng }]));
+  const loads = loadsOf(state);
+  const walks: number[] = [];
 
-  const preview = await previewPlan(night);
-  const walks = preview.result.buses.flatMap((bus) =>
-    bus.route.seats.map((seat) => walkMinutes(seat.walkMeters, PLAN_SETTINGS)),
+  const fixed = state.buses.map((bus) => {
+    const seats = state.seats.filter((s) => s.busId === bus.id);
+    const busWalks = seats.flatMap((seat) => {
+      const home = homes.get(seat.bookingId);
+      const stop = bus.stops.find((s) => s.seq === seat.alightSeq);
+      return home && stop ? [walkMinutes(distance(home, stop), PLAN_SETTINGS)] : [];
+    });
+    walks.push(...busWalks);
+    return {
+      key: bus.id,
+      slot: bus.slot,
+      name: bus.name,
+      fixed: true,
+      departs: bus.departs,
+      plannedDeparts: bus.plannedDeparts,
+      riders: loads.get(bus.id) ?? 0,
+      boarded: state.boardings.filter((b) => b.busId === bus.id).length,
+      capacity: bus.capacity,
+      duration: bus.stops.at(-1)?.offset ?? 0,
+      longestWalk: Math.max(0, ...busWalks),
+      vehicle: 0,
+      first: bus.stops[0],
+      last: bus.stops.at(-1),
+      stops: bus.stops.map((stop) => ({
+        name: stop.name,
+        kind: stop.kind,
+        at: bus.departs + stop.offset * MINUTE,
+        riders: seats.filter((s) => (stop.kind === "board" ? s.boardSeq : s.alightSeq) === stop.seq).length,
+      })),
+    };
+  });
+  const open = preview.result.buses.map((bus, i) => {
+    const departs = nightClock(night, bus.slot);
+    const busWalks = bus.route.seats.map((seat) => walkMinutes(seat.walkMeters, PLAN_SETTINGS));
+    walks.push(...busWalks);
+    return {
+      key: `preview-${i}`,
+      slot: bus.slot,
+      name: bus.name,
+      fixed: false,
+      departs,
+      plannedDeparts: departs,
+      riders: bus.route.seats.length,
+      boarded: 0,
+      capacity: preview.settings.capacity,
+      duration: bus.route.duration,
+      longestWalk: Math.max(0, ...busWalks),
+      vehicle: 0,
+      first: bus.route.stops[0]?.place,
+      last: bus.route.stops.at(-1)?.place,
+      stops: bus.route.stops.map((stop, seq) => ({
+        name: stop.place.name,
+        kind: stop.kind,
+        at: departs + stop.offset * MINUTE,
+        riders: bus.route.seats.filter((s) => (stop.kind === "board" ? s.board : s.alight) === seq).length,
+      })),
+    };
+  });
+
+  const all = [...fixed, ...open].sort((a, b) => a.departs - b.departs || a.name.localeCompare(b.name, "ko"));
+  const vehicles = assignVehicles(
+    all.flatMap((bus) =>
+      bus.first && bus.last
+        ? [
+            {
+              id: bus.key,
+              departs: bus.plannedDeparts / MINUTE,
+              duration: bus.duration,
+              first: bus.first,
+              last: bus.last,
+            },
+          ]
+        : [],
+    ),
+    PLAN_SETTINGS,
   );
+  const status = !planned ? "preview" : open.length > 0 ? "partial" : "fixed";
+
   return {
     ...empty,
-    status: "preview",
-    booked: preview.bookings.length,
-    expected: await expectedRiders(preview.bookings.map((booking) => booking.userId)),
+    status,
+    canRebuild: planned && night >= tonight() && !(await hasActivity(night)),
+    booked: homes.size,
+    demo: homeRows.filter((row) => row.demo).length,
     unplaced: preview.result.unplaced.length,
     averageWalk: walks.length ? walks.reduce((a, b) => a + b, 0) / walks.length : 0,
-    buses: preview.result.buses.map((bus, i) => {
-      const departs = nightClock(night, bus.slot);
-      return {
-        key: `preview-${i}`,
-        slot: bus.slot,
-        name: bus.name,
-        departs,
-        plannedDeparts: departs,
-        riders: bus.route.seats.length,
-        boarded: 0,
-        capacity: PLAN_SETTINGS.capacity,
-        duration: bus.route.duration,
-        longestWalk: Math.max(0, ...bus.route.seats.map((s) => walkMinutes(s.walkMeters, PLAN_SETTINGS))),
-        stops: bus.route.stops.map((stop, seq) => ({
-          name: stop.place.name,
-          kind: stop.kind,
-          at: departs + stop.offset * MINUTE,
-          riders: bus.route.seats.filter((s) => (stop.kind === "board" ? s.board : s.alight) === seq).length,
-        })),
-      };
-    }),
+    boarded: state.boardings.length,
+    dayOf: state.choices.length,
+    expected: await expectedRiders([...new Set(homeRows.map((row) => row.userId))]),
+    fleet: vehicles.size,
+    buses: all.map(({ first: _first, last: _last, ...bus }) => ({
+      ...bus,
+      vehicle: vehicles.vehicleOf.get(bus.key) ?? 0,
+    })),
   };
 }, "operator-plan");
 
@@ -530,6 +639,7 @@ export async function saveOperatorService(input: ServiceSettings): Promise<Opera
     dayOfCutoffMinutes: Number(input.dayOfCutoffMinutes),
     noShowLimit: Number(input.noShowLimit),
     foldThinSlots: input.foldThinSlots !== false,
+    priority: input.priority,
   };
   const invalid = validateService(settings);
   if (invalid) return done({ ok: false, message: invalid });
