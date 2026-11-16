@@ -1,6 +1,6 @@
 import { createMemo, createSignal, Errored, For, isPending, Loading, onSettled, Show } from "solid-js";
 
-import { ADDRESS_DETAIL_MAX_LENGTH, type AddressResult, searchAddress } from "../../lib/address";
+import { type AddressResult, searchAddress } from "../../lib/address";
 import { FadeScroll } from "./fade-scroll";
 import { Input } from "./input";
 import { OptionCard } from "./option-card";
@@ -8,8 +8,6 @@ import { OptionCard } from "./option-card";
 export function AddressSearch(props: {
   selected: AddressResult | undefined;
   onSelect: (result: AddressResult | undefined) => void;
-  detailName?: string;
-  defaultDetail?: string;
 }) {
   const [query, setQuery] = createSignal("");
   const results = createMemo(() => (query().length >= 2 ? searchAddress(query()) : []));
@@ -75,14 +73,6 @@ export function AddressSearch(props: {
           </Loading>
         </Errored>
       </FadeScroll>
-      <Input
-        name={props.detailName ?? "address2"}
-        label="상세 주소 (선택)"
-        placeholder="201동 101호"
-        labelClass="mt-1.5"
-        value={props.defaultDetail ?? ""}
-        maxlength={ADDRESS_DETAIL_MAX_LENGTH}
-      />
     </>
   );
 }

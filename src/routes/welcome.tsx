@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@solidjs/router";
+import { query, useLocation, useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, For, isHydrating, Loading, onSettled, Show, untrack } from "solid-js";
 
 import { AddressPrivacyNote, AddressSearch } from "../components/common/address-search";
@@ -63,6 +63,7 @@ export default function Welcome() {
   }
 
   function followJoinState(next: JoinState) {
+    query.delete(getWelcomeState.keyFor());
     revalidateSession();
     setNow(Date.now());
     setCodeLocked(false);
@@ -141,6 +142,7 @@ export default function Welcome() {
     }
     const next = await getJoinState();
     if (next.step === "complete") {
+      query.delete(getWelcomeState.keyFor());
       revalidateSession();
       nav(await afterSignInPath(), { replace: true });
       return;
@@ -171,9 +173,9 @@ export default function Welcome() {
     await syncJoinState();
   }
 
-  async function completeJoin(selected: AddressResult | undefined, detail: string) {
+  async function completeJoin(selected: AddressResult | undefined) {
     if (!selected) throw new Error("주소를 검색해서 골라 주세요.");
-    const result = await saveHomeAddress(selected.address, detail);
+    const result = await saveHomeAddress(selected.address, "");
     if (!result.ok) throw new Error(result.message);
   }
 
@@ -181,7 +183,16 @@ export default function Welcome() {
     <Loading fallback={<div class="flex-1" />}>
       <div class={["flex flex-col px-5", page() === "join-4" ? "h-dvh" : "flex-1"]}>
         <Show when={page() === "welcome"}>
-          <Header title="" isInitialPage />
+          <Header
+            title=""
+            isInitialPage
+            aside={
+              <a href="/guide" class="-my-2 flex items-center gap-x-0.5 py-2 text-sm font-semibold text-sand-12">
+                이용 설명서
+                <PhCaretRightBold aria-hidden="true" class="text-xs text-sand-11" />
+              </a>
+            }
+          />
           <DemoNotice class="mt-2" />
           <div class="flex flex-1 flex-col justify-end px-1 pt-16 pb-6">
             <RouteDots current={1} total={JOIN_STEPS} spacing="wide" />
@@ -450,10 +461,9 @@ export default function Welcome() {
             class="flex min-h-0 flex-1 flex-col"
             onSubmit={(e) => {
               e.preventDefault();
-              const form = new FormData(e.currentTarget);
               setError("");
               setLoading(true);
-              completeJoin(selectedAddress(), String(form.get("address2") ?? ""))
+              completeJoin(selectedAddress())
                 .then(syncJoinState)
                 .catch(showError)
                 .finally(() => setLoading(false));
@@ -544,11 +554,15 @@ export default function Welcome() {
                 )}
               </For>
             </ol>
+            <a href="/guide" class="mt-6 ml-10.5 flex w-max items-center gap-x-0.5 text-sm font-semibold text-sand-12">
+              이용 설명서 자세히 보기
+              <PhCaretRightBold aria-hidden="true" class="text-xs text-sand-11" />
+            </a>
           </section>
           <Footer
             type="button"
             buttonLabel="시작하기"
-            onClick={() => void afterSignInPath().then((path) => nav(path, { replace: true }))}
+            onClick={() => void afterSignInPath("/booking").then((path) => nav(path, { replace: true }))}
           />
         </Show>
       </div>

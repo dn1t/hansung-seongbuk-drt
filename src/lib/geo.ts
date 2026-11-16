@@ -40,6 +40,11 @@ export function currentPosition(): Promise<Coords> {
   });
 }
 
-export async function afterSignInPath() {
-  return (await locationPermission()) === "prompt" ? "/location" : "/";
+export function appPath(value: string | undefined) {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/";
+}
+
+export async function afterSignInPath(next = "/") {
+  if ((await locationPermission()) !== "prompt") return next;
+  return next === "/" ? "/location" : `/location?next=${encodeURIComponent(next)}`;
 }

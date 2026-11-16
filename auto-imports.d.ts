@@ -11,6 +11,8 @@ declare global {
   const PhArrowLeftBold: typeof import('~icons/ph/arrow-left-bold').default
   const PhArrowRightBold: typeof import('~icons/ph/arrow-right-bold').default
   const PhArrowUpRightBold: typeof import('~icons/ph/arrow-up-right-bold').default
+  const PhBookOpenTextBold: typeof import('~icons/ph/book-open-text-bold').default
+  const PhBusBold: typeof import('~icons/ph/bus-bold').default
   const PhCalendarBlank: typeof import('~icons/ph/calendar-blank').default
   const PhCalendarBlankBold: typeof import('~icons/ph/calendar-blank-bold').default
   const PhCalendarBlankFill: typeof import('~icons/ph/calendar-blank-fill').default
@@ -21,6 +23,7 @@ declare global {
   const PhCaretRightBold: typeof import('~icons/ph/caret-right-bold').default
   const PhChartBarBold: typeof import('~icons/ph/chart-bar-bold').default
   const PhCheck: typeof import('~icons/ph/check').default
+  const PhCheckBold: typeof import('~icons/ph/check-bold').default
   const PhCheckCircle: typeof import('~icons/ph/check-circle').default
   const PhCheckCircleFill: typeof import('~icons/ph/check-circle-fill').default
   const PhCircleNotch: typeof import('~icons/ph/circle-notch').default
@@ -30,12 +33,14 @@ declare global {
   const PhClockCounterClockwiseBold: typeof import('~icons/ph/clock-counter-clockwise-bold').default
   const PhEnvelopeSimpleBold: typeof import('~icons/ph/envelope-simple-bold').default
   const PhFlagBold: typeof import('~icons/ph/flag-bold').default
+  const PhHourglassMediumBold: typeof import('~icons/ph/hourglass-medium-bold').default
   const PhHouseBold: typeof import('~icons/ph/house-bold').default
   const PhHouseFill: typeof import('~icons/ph/house-fill').default
   const PhLockSimple: typeof import('~icons/ph/lock-simple').default
   const PhLockSimpleBold: typeof import('~icons/ph/lock-simple-bold').default
   const PhMagnifyingGlass: typeof import('~icons/ph/magnifying-glass').default
   const PhMapPinBold: typeof import('~icons/ph/map-pin-bold').default
+  const PhMinusBold: typeof import('~icons/ph/minus-bold').default
   const PhMoon: typeof import('~icons/ph/moon').default
   const PhMoonFill: typeof import('~icons/ph/moon-fill').default
   const PhNavigationArrowBold: typeof import('~icons/ph/navigation-arrow-bold').default

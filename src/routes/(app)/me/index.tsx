@@ -100,6 +100,9 @@ export default function Me() {
             />
           </ul>
           <ul class="mt-3 overflow-hidden rounded-2xl bg-sand-2">
+            <LinkRow href="/guide" icon={<PhBookOpenTextBold />} title="이용 설명서" />
+          </ul>
+          <ul class="mt-3 overflow-hidden rounded-2xl bg-sand-2">
             <ActionRow icon={<PhSignOutBold />} title="로그아웃" onClick={() => void signOut()} />
             <ActionRow
               icon={<PhUserMinusBold />}

@@ -19,6 +19,7 @@ export function Header(props: {
   isInitialPage?: boolean;
   onBackClick?: () => void;
   step?: { current: number; total: number };
+  aside?: JSX.Element;
 }) {
   return (
     <div class="mb-2 px-1">
@@ -43,6 +44,7 @@ export function Header(props: {
             </div>
           )}
         </Show>
+        {props.aside}
       </div>
       <Show when={props.title}>
         <h1 class="mt-7 text-3xl font-bold text-balance break-keep">{props.title}</h1>

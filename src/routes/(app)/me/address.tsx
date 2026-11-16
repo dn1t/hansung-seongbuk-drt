@@ -16,13 +16,13 @@ export default function EditAddress() {
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal("");
 
-  async function save(detail: string) {
+  async function save() {
     const picked = selected();
     if (!picked) return;
     setError("");
     setSaving(true);
     try {
-      const result = await saveHomeAddress(picked.address, detail);
+      const result = await saveHomeAddress(picked.address, "");
       if (!result.ok) throw new Error(result.message);
       revalidate([getProfile.key, getBookingOverview.key]);
       nav("/me?saved=address", { replace: true });
@@ -45,7 +45,7 @@ export default function EditAddress() {
         class="flex min-h-0 flex-1 flex-col"
         onSubmit={(e) => {
           e.preventDefault();
-          void save(String(new FormData(e.currentTarget).get("address2") ?? ""));
+          void save();
         }}
       >
         <Loading fallback={null}>

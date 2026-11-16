@@ -1,15 +1,16 @@
 import { Title } from "@solidjs/meta";
-import { useNavigate } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
 import { Footer, Header } from "../../components/layout/screen";
-import { currentPosition } from "../../lib/geo";
+import { appPath, currentPosition } from "../../lib/geo";
 
 export default function AskLocation() {
   const nav = useNavigate();
+  const [params] = useSearchParams<{ next?: string }>();
   const [asking, setAsking] = createSignal(false);
-  const done = () => nav("/", { replace: true });
+  const done = () => nav(appPath(params.next), { replace: true });
 
   async function allow() {
     setAsking(true);

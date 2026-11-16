@@ -26,7 +26,7 @@ export default function BookingChangeAddress() {
   const choice = () => picked() ?? initial();
   const ready = () => (choice() === "other" ? other() !== undefined : choice() !== initial());
 
-  async function save(detail: string) {
+  async function save() {
     const current = booking();
     if (!current) return;
     setError("");
@@ -38,7 +38,7 @@ export default function BookingChangeAddress() {
         slot: current.slot,
         address:
           choice() === "other" && place
-            ? { kind: "other", address: place.address, detail }
+            ? { kind: "other", address: place.address, detail: "" }
             : { kind: choice() === "home" ? "home" : "keep" },
       });
       if (!result.ok) throw new Error(result.message);
@@ -66,7 +66,7 @@ export default function BookingChangeAddress() {
                 class="flex min-h-0 flex-1 flex-col"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  void save(String(new FormData(e.currentTarget).get("address2") ?? ""));
+                  void save();
                 }}
               >
                 <p class="mt-4 px-1 text-sm font-semibold text-sand-11 tabular-nums">

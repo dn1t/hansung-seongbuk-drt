@@ -24,7 +24,7 @@ export default function BookingAddress() {
   const otherMode = () => useOther() || !overview().home;
   const ready = () => nights().length > 0 && Boolean(params.slot) && (!otherMode() || other() !== undefined);
 
-  async function submit(detail: string) {
+  async function submit() {
     setError("");
     setSaving(true);
     try {
@@ -32,7 +32,7 @@ export default function BookingAddress() {
       const result = await createBookings({
         nights: nights(),
         slot: params.slot ?? "",
-        address: otherMode() && picked ? { address: picked.address, detail } : null,
+        address: otherMode() && picked ? { address: picked.address, detail: "" } : null,
       });
       if (!result.ok) throw new Error(result.message);
       nav(`/booking?saved=booked&count=${result.count}`, { replace: true });
@@ -57,7 +57,7 @@ export default function BookingAddress() {
           class="flex min-h-0 flex-1 flex-col"
           onSubmit={(e) => {
             e.preventDefault();
-            void submit(String(new FormData(e.currentTarget).get("address2") ?? ""));
+            void submit();
           }}
         >
           <p class="mt-4 px-1 text-sm font-semibold text-sand-11 tabular-nums">
