@@ -1,4 +1,4 @@
-import { SCHOOLS } from "../lib/schools.ts";
+import { SCHOOL_START_IDS, SCHOOLS } from "../lib/schools.ts";
 import {
   SURVEY_FARES,
   SURVEY_FREQUENCIES,
@@ -16,21 +16,65 @@ export const DEMO_MAX = 500;
 export const DEMO_SLOTS = ["23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", "03:30"];
 export const DEMO_SLOT_WEIGHTS = [2, 3, 6, 8, 10, 10, 8, 6, 4, 2];
 
-const DOMAINS = Object.keys(SCHOOLS).filter((domain) => domain !== "dongbang.ac.kr");
+const DOMAINS = Object.keys(SCHOOLS);
 
-const AREAS = [
-  { lat: 37.6553, lng: 127.0613, weight: 5 },
-  { lat: 37.6448, lng: 127.0645, weight: 3 },
-  { lat: 37.638, lng: 127.0257, weight: 4 },
-  { lat: 37.6265, lng: 127.026, weight: 3 },
-  { lat: 37.6531, lng: 127.0477, weight: 3 },
-  { lat: 37.613, lng: 127.052, weight: 3 },
-  { lat: 37.6062, lng: 127.0481, weight: 2 },
-  { lat: 37.5898, lng: 127.0579, weight: 3 },
-  { lat: 37.5801, lng: 127.0469, weight: 2 },
-  { lat: 37.6025, lng: 127.0792, weight: 3 },
-  { lat: 37.5966, lng: 127.0852, weight: 2 },
-  { lat: 37.6029, lng: 127.0137, weight: 2 },
+interface HomeArea {
+  region: string;
+  lat: number;
+  lng: number;
+  weight: number;
+  spread: number;
+}
+
+const SEOUL = 0.012;
+const OUTER = 0.022;
+
+const AREAS: HomeArea[] = [
+  { region: "서울 성북구", lat: 37.6062, lng: 127.0281, weight: 6, spread: SEOUL },
+  { region: "서울 노원구", lat: 37.6449, lng: 127.0659, weight: 6, spread: SEOUL },
+  { region: "서울 강북구", lat: 37.6326, lng: 127.0213, weight: 5, spread: SEOUL },
+  { region: "서울 도봉구", lat: 37.6619, lng: 127.0396, weight: 4, spread: SEOUL },
+  { region: "서울 중랑구", lat: 37.5998, lng: 127.0909, weight: 4, spread: SEOUL },
+  { region: "서울 동대문구", lat: 37.5822, lng: 127.0527, weight: 4, spread: SEOUL },
+  { region: "서울 은평구", lat: 37.6106, lng: 126.9227, weight: 3, spread: SEOUL },
+  { region: "서울 광진구", lat: 37.5434, lng: 127.0791, weight: 3, spread: SEOUL },
+  { region: "서울 종로구", lat: 37.5834, lng: 126.9937, weight: 2, spread: SEOUL },
+  { region: "서울 성동구", lat: 37.5552, lng: 127.0386, weight: 2, spread: SEOUL },
+  { region: "서울 서대문구", lat: 37.5768, lng: 126.9383, weight: 2, spread: SEOUL },
+  { region: "서울 마포구", lat: 37.5577, lng: 126.9081, weight: 2, spread: SEOUL },
+  { region: "서울 송파구", lat: 37.5049, lng: 127.1149, weight: 2, spread: SEOUL },
+  { region: "서울 강동구", lat: 37.5426, lng: 127.1386, weight: 2, spread: SEOUL },
+  { region: "서울 관악구", lat: 37.4728, lng: 126.9445, weight: 2, spread: SEOUL },
+  { region: "서울 강서구", lat: 37.5574, lng: 126.8424, weight: 2, spread: SEOUL },
+  { region: "서울 중구", lat: 37.5596, lng: 127.0055, weight: 1, spread: SEOUL },
+  { region: "서울 용산구", lat: 37.5324, lng: 126.9817, weight: 1, spread: SEOUL },
+  { region: "서울 양천구", lat: 37.5235, lng: 126.8604, weight: 1, spread: SEOUL },
+  { region: "서울 구로구", lat: 37.4948, lng: 126.8579, weight: 1, spread: SEOUL },
+  { region: "서울 금천구", lat: 37.4627, lng: 126.9022, weight: 1, spread: SEOUL },
+  { region: "서울 영등포구", lat: 37.5193, lng: 126.9095, weight: 1, spread: SEOUL },
+  { region: "서울 동작구", lat: 37.5017, lng: 126.9473, weight: 1, spread: SEOUL },
+  { region: "서울 서초구", lat: 37.4877, lng: 127.0189, weight: 1, spread: SEOUL },
+  { region: "서울 강남구", lat: 37.4979, lng: 127.0612, weight: 1, spread: SEOUL },
+  { region: "경기 의정부시", lat: 37.7381, lng: 127.0475, weight: 2, spread: OUTER },
+  { region: "경기 남양주시", lat: 37.6363, lng: 127.2165, weight: 1, spread: OUTER },
+  { region: "경기 구리시", lat: 37.5986, lng: 127.1393, weight: 1, spread: OUTER },
+  { region: "경기 고양시", lat: 37.6584, lng: 126.832, weight: 1, spread: OUTER },
+  { region: "경기 양주시", lat: 37.7853, lng: 127.0458, weight: 0.5, spread: OUTER },
+  { region: "경기 파주시", lat: 37.7599, lng: 126.7802, weight: 0.5, spread: OUTER },
+  { region: "경기 김포시", lat: 37.6152, lng: 126.7156, weight: 0.5, spread: OUTER },
+  { region: "경기 하남시", lat: 37.5393, lng: 127.2149, weight: 0.5, spread: OUTER },
+  { region: "경기 성남시", lat: 37.4201, lng: 127.1265, weight: 0.5, spread: OUTER },
+  { region: "경기 부천시", lat: 37.5035, lng: 126.766, weight: 0.5, spread: OUTER },
+  { region: "경기 광명시", lat: 37.4786, lng: 126.8646, weight: 0.5, spread: OUTER },
+  { region: "경기 안양시", lat: 37.3943, lng: 126.9568, weight: 0.5, spread: OUTER },
+  { region: "경기 수원시", lat: 37.2636, lng: 127.0286, weight: 0.5, spread: OUTER },
+  { region: "경기 용인시", lat: 37.3219, lng: 127.0977, weight: 0.5, spread: OUTER },
+  { region: "경기 시흥시", lat: 37.3799, lng: 126.8031, weight: 0.5, spread: OUTER },
+  { region: "경기 안산시", lat: 37.3219, lng: 126.8309, weight: 0.5, spread: OUTER },
+  { region: "경기 군포시", lat: 37.3617, lng: 126.9352, weight: 0.5, spread: OUTER },
+  { region: "인천 부평구", lat: 37.5075, lng: 126.7218, weight: 0.5, spread: SEOUL },
+  { region: "인천 계양구", lat: 37.5372, lng: 126.7377, weight: 0.5, spread: SEOUL },
+  { region: "인천 연수구", lat: 37.4103, lng: 126.6783, weight: 0.5, spread: SEOUL },
 ];
 
 const FREQUENCY_WEIGHTS: Record<SurveyFrequency, number> = { rare: 1, "1": 3, "2-3": 4, "4+": 2 };
@@ -50,6 +94,7 @@ export interface DemoRider {
   id: string;
   name: string;
   email: string;
+  address: string;
   lat: number;
   lng: number;
 }
@@ -94,16 +139,16 @@ export function demoRiders(count: number): DemoRider[] {
       id: `${DEMO_RIDER_PREFIX}${n}`,
       name: `데모 학생 ${n}`,
       email: `${DEMO_EMAIL_PREFIX}${n}@${domain}`,
-      lat: area.lat + (next() - 0.5) * 0.012,
-      lng: area.lng + (next() - 0.5) * 0.014,
+      address: `${area.region} (${DEMO_ADDRESS})`,
+      lat: area.lat + (next() - 0.5) * area.spread,
+      lng: area.lng + (next() - 0.5) * area.spread * 1.25,
     };
   });
 }
 
 function schoolStartId(email: string) {
-  const domain = email.split("@").pop() ?? "";
-  const index = Object.keys(SCHOOLS).indexOf(domain);
-  return `school-${Math.max(0, index) + 1}`;
+  const school = SCHOOLS[(email.split("@").pop() ?? "") as keyof typeof SCHOOLS] ?? SCHOOLS["hansung.ac.kr"];
+  return SCHOOL_START_IDS[school];
 }
 
 export function demoSurveys(riders: DemoRider[], options: { slots: string[]; areaIds: string[] }): DemoSurvey[] {

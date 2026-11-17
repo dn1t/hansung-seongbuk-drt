@@ -2,7 +2,7 @@ import { asc } from "drizzle-orm";
 
 import { startAreas } from "../lib/app-schema";
 import { db } from "../lib/db";
-import { SCHOOLS } from "../lib/schools";
+import { SCHOOL_START_IDS, SCHOOLS } from "../lib/schools";
 import { distance } from "./planner/geo";
 import type { Place } from "./planner/route";
 import { PLAN_SETTINGS } from "./planner/settings";
@@ -15,19 +15,16 @@ export interface StartPlace {
   lng: number;
 }
 
-const SCHOOL_COORDS: Record<string, { lat: number; lng: number }> = {
+const SCHOOL_COORDS: Record<(typeof SCHOOLS)[keyof typeof SCHOOLS], { lat: number; lng: number }> = {
   고려대학교: { lat: 37.5894, lng: 127.0323 },
   국민대학교: { lat: 37.6109, lng: 126.9969 },
-  동덕여자대학교: { lat: 37.6067, lng: 127.0421 },
   서경대학교: { lat: 37.615, lng: 127.0127 },
   성신여자대학교: { lat: 37.5913, lng: 127.0221 },
-  한국예술종합학교: { lat: 37.611, lng: 127.0573 },
   한성대학교: { lat: 37.5826, lng: 127.0102 },
-  동방문화대학원대학교: { lat: 37.5936, lng: 127.0007 },
 };
 
-export const SCHOOL_PLACES: StartPlace[] = Object.values(SCHOOLS).map((name, i) => ({
-  id: `school-${i + 1}`,
+export const SCHOOL_PLACES: StartPlace[] = Object.values(SCHOOLS).map((name) => ({
+  id: SCHOOL_START_IDS[name],
   name,
   kind: "school" as const,
   ...SCHOOL_COORDS[name],

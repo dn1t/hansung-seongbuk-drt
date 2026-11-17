@@ -1,7 +1,6 @@
 import { createClient } from "@libsql/client";
 
 import {
-  DEMO_ADDRESS,
   DEMO_EMAIL_PREFIX,
   DEMO_SLOT_WEIGHTS,
   DEMO_SLOTS,
@@ -131,9 +130,9 @@ await client.batch(
     ...homes.map((home) => ({
       sql: `insert into users (id, name, email, email_verified, home_address, home_lat, home_lng, demo)
             values (?, ?, ?, 1, ?, ?, ?, 1)
-            on conflict(id) do update set name = excluded.name, home_lat = excluded.home_lat,
+            on conflict(id) do update set name = excluded.name, email = excluded.email, home_address = excluded.home_address, home_lat = excluded.home_lat,
               home_lng = excluded.home_lng, demo = 1`,
-      args: [home.id, home.name, home.email, DEMO_ADDRESS, home.lat, home.lng],
+      args: [home.id, home.name, home.email, home.address, home.lat, home.lng],
     })),
     ...answers.map((answer) => ({
       sql: `insert into surveys (user_id, frequency, slot, start_id, way, fare) values (?, ?, ?, ?, ?, ?)
@@ -158,7 +157,7 @@ for (const day of nights) {
         ? {
             sql: `insert into bookings (id, user_id, night, slot, address, lat, lng) values (?, ?, ?, ?, ?, ?, ?)
                   on conflict(user_id, night) do update set slot = excluded.slot, lat = excluded.lat, lng = excluded.lng`,
-            args: [crypto.randomUUID(), home.id, day, slot, DEMO_ADDRESS, home.lat, home.lng],
+            args: [crypto.randomUUID(), home.id, day, slot, home.address, home.lat, home.lng],
           }
         : { sql: "delete from bookings where user_id = ? and night = ?", args: [home.id, day] },
     );

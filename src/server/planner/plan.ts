@@ -286,11 +286,36 @@ function nameBuses(groups: Group[], slots: string[]) {
   return names;
 }
 
+const STOP_REACH_FACTOR = 2;
+const GRID_DEGREES = 0.01;
+
+function stopReach(candidates: Place[], meters: number) {
+  const cellOf = (point: Point) => [Math.floor(point.lat / GRID_DEGREES), Math.floor(point.lng / GRID_DEGREES)];
+  const grid = new Map<string, Place[]>();
+  for (const stop of candidates) {
+    const [row, col] = cellOf(stop);
+    const key = `${row}:${col}`;
+    grid.set(key, [...(grid.get(key) ?? []), stop]);
+  }
+  const span = Math.ceil(meters / (GRID_DEGREES * 88_000));
+  return (home: Point) => {
+    const [row, col] = cellOf(home);
+    for (let dr = -span; dr <= span; dr++) {
+      for (let dc = -span; dc <= span; dc++) {
+        if (grid.get(`${row + dr}:${col + dc}`)?.some((stop) => distance(stop, home) <= meters)) return true;
+      }
+    }
+    return false;
+  };
+}
+
 export function planNight(input: PlanInput): PlanResult {
   const { settings } = input;
   const slotIndex = new Map(input.slots.map((slot, i) => [slot, i]));
-  const riders = input.riders.filter((r) => slotIndex.has(r.slot));
-  const unplaced = input.riders.filter((r) => !slotIndex.has(r.slot)).map((r) => r.id);
+  const inReach = stopReach(input.candidates, settings.maxWalkMeters * STOP_REACH_FACTOR);
+  const servable = (r: PlanRider) => slotIndex.has(r.slot) && inReach(r.home);
+  const riders = input.riders.filter(servable);
+  const unplaced = input.riders.filter((r) => !servable(r)).map((r) => r.id);
   if (riders.length === 0 || input.candidates.length === 0) {
     return {
       buses: [],

@@ -5,7 +5,6 @@ import { db } from "../lib/db";
 import { users } from "../lib/schema";
 import { serviceNow, slotCutoff } from "./clock";
 import {
-  DEMO_ADDRESS,
   DEMO_RIDER_PREFIX,
   DEMO_SLOT_WEIGHTS,
   DEMO_SLOTS,
@@ -88,7 +87,7 @@ async function saveDemoRiders(riders: DemoRider[]) {
             name: rider.name,
             email: rider.email,
             emailVerified: true,
-            homeAddress: DEMO_ADDRESS,
+            homeAddress: rider.address,
             homeLat: rider.lat,
             homeLng: rider.lng,
             demo: true,
@@ -98,6 +97,8 @@ async function saveDemoRiders(riders: DemoRider[]) {
           target: users.id,
           set: {
             name: sql`excluded.name`,
+            email: sql`excluded.email`,
+            homeAddress: sql`excluded.home_address`,
             homeLat: sql`excluded.home_lat`,
             homeLng: sql`excluded.home_lng`,
             demo: true,
@@ -159,7 +160,7 @@ export async function addDemoBookings(night: string, count: number) {
       userId: rider.id,
       night,
       slot: weighted(open, weights, next),
-      address: DEMO_ADDRESS,
+      address: rider.address,
       lat: rider.lat,
       lng: rider.lng,
     }));

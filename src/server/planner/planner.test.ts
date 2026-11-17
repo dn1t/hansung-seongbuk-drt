@@ -187,6 +187,16 @@ describe("planNight", () => {
     );
   });
 
+  it("leaves a rider with no stop anywhere near home unplaced", () => {
+    const near = riders(40, 5)
+      .slice(0, 8)
+      .map((r) => ({ ...r, slot: "01:00", home: { lat: 37.655, lng: 127.065 } }));
+    const far: PlanRider = { ...near[0], id: "suwon", home: { lat: 37.2636, lng: 127.0286 } };
+    const plan = planNight({ slots: SLOTS, riders: [far, ...near.slice(1)], candidates, settings: PLAN_SETTINGS });
+    assert.deepEqual(plan.unplaced, ["suwon"]);
+    assert.equal(plan.buses.flatMap((bus) => bus.route.seats).length, 7);
+  });
+
   it("moves a lone rider into the next slot's bus going the same way", () => {
     const base = riders(40, 3).map((r) => ({ ...r, slot: "01:30", home: { lat: 37.655, lng: 127.065 } }));
     const lone: PlanRider = { ...base[0], id: "lone", slot: "01:00" };

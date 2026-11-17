@@ -86,7 +86,8 @@ export interface SurveyRow {
 
 const DAILY_DAYS = 14;
 const COMMENTS_SHOWN = 50;
-const DISTRICTS_SHOWN = 8;
+const DISTRICTS_SHOWN = 16;
+const STARTS_SHOWN = 8;
 const DAY = 86_400_000;
 
 export async function loadRespondents(): Promise<Respondent[]> {
@@ -199,7 +200,7 @@ export async function surveyReport(filter: ResearchFilter): Promise<SurveyReport
     slots: slotKeys.map((slot) => ({ key: slot, label: slot, count: rows.filter((row) => row.slot === slot).length })),
     starts: ranked(
       rows.map((row) => startLabel(names, row.startId)),
-      DISTRICTS_SHOWN,
+      STARTS_SHOWN,
     ),
     ways: tally(
       SURVEY_WAYS,

@@ -176,7 +176,7 @@ export function ReaderPreview() {
 
 export function DriverPreview() {
   const stops = [
-    { time: at(0, 42), name: "동덕여대후문", kind: "board" as const },
+    { time: at(0, 42), name: "성신여대정문앞", kind: "board" as const },
     { time: at(0, 46), name: "장위시장", kind: "alight" as const, off: 2 },
     { time: at(0, 51), name: "어해랑앞", kind: "skip" as const },
     { time: at(0, 56), name: "상계주공2단지", kind: "alight" as const, off: 1, next: true },
