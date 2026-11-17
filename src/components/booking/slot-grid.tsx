@@ -10,7 +10,7 @@ export function SlotGrid(props: {
   routes?: Record<string, number>;
 }) {
   return (
-    <ul class="grid grid-cols-5 gap-1.5">
+    <ul class={["grid gap-1.5", props.slots.length > 10 ? "grid-cols-4" : "grid-cols-5"]}>
       <For each={props.slots}>
         {(slot) => {
           const active = () => props.selected === slot;

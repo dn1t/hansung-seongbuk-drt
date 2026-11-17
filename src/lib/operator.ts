@@ -57,12 +57,14 @@ export interface OperatorNights {
   demoMax: number;
 }
 
+const DEMO_NIGHTS_MAX = 60;
+
 export async function addDemoBookings(input: {
-  night: string;
+  nights: string[];
   count: number;
-}): Promise<OperatorResult & { added?: number; kept?: number }> {
+}): Promise<OperatorResult & { added?: number; kept?: number; nights?: number; skipped?: number }> {
   "use server";
-  const done = (result: OperatorResult & { added?: number; kept?: number }) =>
+  const done = (result: OperatorResult & { added?: number; kept?: number; nights?: number; skipped?: number }) =>
     respond(result, { revalidate: [getOperatorNights.key, getOperatorPlan.key] });
   try {
     await requireStaff();
@@ -74,15 +76,31 @@ export async function addDemoBookings(input: {
   if (!Number.isFinite(size) || size < 1 || size > DEMO_MAX) {
     return done({ ok: false, message: `데모 학생은 1–${DEMO_MAX}명으로 정해 주세요.` });
   }
-  if (!NIGHT_PATTERN.test(input.night) || input.night < tonight() || !(await isOperatingNight(input.night))) {
-    return done({ ok: false, message: "다가오는 운행일을 골라 주세요." });
+  const requested = [...new Set(Array.isArray(input.nights) ? input.nights : [])];
+  if (requested.length === 0 || requested.length > DEMO_NIGHTS_MAX) {
+    return done({ ok: false, message: `운행일을 1–${DEMO_NIGHTS_MAX}일 골라 주세요.` });
   }
-  if ((await demo.openDemoSlots(input.night)).length === 0) {
-    return done({ ok: false, message: "이날은 모든 시간대의 신청이 마감됐어요." });
+  if (requested.some((night) => typeof night !== "string" || !NIGHT_PATTERN.test(night) || night < tonight())) {
+    return done({ ok: false, message: "다가오는 운행일만 고를 수 있어요." });
+  }
+  const operating = new Set(
+    (
+      await db
+        .select({ night: operatingNights.night })
+        .from(operatingNights)
+        .where(inArray(operatingNights.night, requested))
+    ).map((row) => row.night),
+  );
+  const nights: string[] = [];
+  for (const night of requested.sort()) {
+    if (operating.has(night) && (await demo.openDemoSlots(night)).length > 0) nights.push(night);
+  }
+  if (nights.length === 0) {
+    return done({ ok: false, message: "고른 날은 모든 시간대의 신청이 마감됐어요." });
   }
   try {
-    const { added, kept } = await demo.addDemoBookings(input.night, size);
-    return done({ ok: true, added, kept });
+    const { added, kept, filled } = await demo.addDemoBookingsTo(nights, size);
+    return done({ ok: true, added, kept, nights: filled.length, skipped: requested.length - nights.length });
   } catch (err) {
     console.error("addDemoBookings:", err);
     return done({ ok: false, message: "데모 신청을 넣지 못했어요. 다시 시도해 주세요." });

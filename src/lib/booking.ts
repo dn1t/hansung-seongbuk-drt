@@ -154,7 +154,7 @@ export async function createBookings(input: {
     return done({ ok: false, message: "시간을 다시 골라 주세요." });
   }
   if (nights.some((night) => !isOpen(night, input.slot))) {
-    return done({ ok: false, message: "탑승 1시간 전이 지난 시간이에요. 더 늦은 시간을 골라 주세요." });
+    return done({ ok: false, message: "탑승 30분 전이 지난 시간이에요. 더 늦은 시간을 골라 주세요." });
   }
 
   try {
@@ -212,11 +212,11 @@ export async function updateBooking(input: {
     if (!booking || !isOpen(booking.night, booking.slot)) {
       return done({
         ok: false,
-        message: "탑승 1시간 전이 지나서 바꿀 수 없어요. 못 타게 되면 취소해 주세요.",
+        message: "탑승 30분 전이 지나서 바꿀 수 없어요. 못 타게 되면 취소해 주세요.",
       });
     }
     if (!isOpen(booking.night, input.slot)) {
-      return done({ ok: false, message: "탑승 1시간 전이 지난 시간이에요. 더 늦은 시간을 골라 주세요." });
+      return done({ ok: false, message: "탑승 30분 전이 지난 시간이에요. 더 늦은 시간을 골라 주세요." });
     }
 
     let place: { address: string; detail: string | null; lat: number; lng: number } | null = null;

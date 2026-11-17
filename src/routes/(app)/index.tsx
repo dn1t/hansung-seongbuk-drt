@@ -51,6 +51,10 @@ export default function Home() {
       <DemoNotice class="mt-6" />
       <div class="mt-6 flex h-7 items-center justify-between px-1">
         <h1 class="text-xl font-bold">오늘 귀가</h1>
+        <a href="/booking/routes" class="-my-2 flex items-center gap-x-0.5 py-2 text-sm font-semibold text-sand-12">
+          시간대별 노선
+          <PhCaretRightBold aria-hidden="true" class="text-xs text-sand-11" />
+        </a>
       </div>
       <Errored
         fallback={(_, reset) => (
@@ -152,8 +156,8 @@ export default function Home() {
                       <section class="mt-3 rounded-2xl border border-sand-4 px-5 py-4">
                         <p class="font-semibold break-keep tabular-nums">노선은 {formatClock(fixesAt())}에 정해져요</p>
                         <p class="mt-1 text-sm font-medium break-keep text-sand-11">
-                          탑승 1시간 전에 그때까지의 신청으로 노선이 정해지고, 그 전까지는 사전 신청에서 시간과 가는
-                          곳을 바꿀 수 있어요.
+                          탑승 30분 전에 그때까지의 신청으로 노선이 정해지고, 그 전까지는 사전 신청에서 시간과 가는 곳을
+                          바꿀 수 있어요.
                         </p>
                         <a
                           href={`/booking/routes?slot=${encodeURIComponent(state().range.from)}`}

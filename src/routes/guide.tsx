@@ -47,7 +47,7 @@ export default function Guide() {
     },
     {
       title: "바꾼 신청은 ‘오늘 귀가’에 반영돼요",
-      description: "탑승 1시간 전까지 바꾼 내용으로, 내 집 근처로 가는 노선을 골라 탈 수 있게 보여 줘요.",
+      description: "탑승 30분 전까지 바꾼 내용으로, 내 집 근처로 가는 노선을 골라 탈 수 있게 보여 줘요.",
       where: ["오늘 귀가", "내 집 근처로 가는 노선"],
       extra: <NearbyRoutesPreview />,
     },
@@ -90,14 +90,12 @@ export default function Guide() {
 
       <section class="mt-10" aria-labelledby="guide-booking">
         <h2 id="guide-booking" class="px-1 text-xl font-bold text-balance break-keep">
-          탑승 1시간 전까지 바꾸고, 오늘 귀가에서 노선을 골라요
+          탑승 30분 전까지 바꾸고, 오늘 귀가에서 노선을 골라요
         </h2>
         <div class="mt-4 flex items-start gap-x-3 rounded-2xl bg-sand-2 px-4 py-3.5">
           <PhClockBold aria-hidden="true" class="mt-0.5 shrink-0 text-lg text-amber-11" />
           <p class="flex flex-col gap-y-0.5 break-keep">
-            <span class="font-semibold text-balance">
-              날짜와 시간, 가는 곳은 탑승 시간 1시간 전까지 바꿀 수 있어요.
-            </span>
+            <span class="font-semibold text-balance">날짜와 시간, 가는 곳은 탑승 시간 30분 전까지 바꿀 수 있어요.</span>
             <span class="text-sm font-medium text-sand-11">취소는 그 뒤에도 할 수 있어요.</span>
           </p>
         </div>

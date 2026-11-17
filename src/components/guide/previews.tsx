@@ -43,7 +43,7 @@ export function SlotRoutesPreview() {
       <div class="px-3.5 pt-3 pb-3.5">
         <p class="font-bold">시간대별 노선</p>
         <div class="mt-2.5 grid grid-cols-3 gap-1.5">
-          <For each={["23:30", "00:30", "01:30"]}>
+          <For each={["00:00", "00:30", "01:00"]}>
             {(clock, i) => (
               <span
                 class={[

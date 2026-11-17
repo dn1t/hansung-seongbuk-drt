@@ -4,6 +4,7 @@ import { createMemo, createSignal, Errored, For, isPending, Loading, Show } from
 import { env } from "virtual:solid-env/client";
 
 import { Header } from "../../../components/layout/screen";
+import { PlanMap, routeColors } from "../../../components/operator/plan-map";
 import { RouteChip, SeatCount } from "../../../components/ride/badges";
 import { RouteTimeline, type TimelineRow } from "../../../components/ride/route-timeline";
 import { getNightRoutes, type NightRoute } from "../../../lib/night-routes";
@@ -37,14 +38,22 @@ export default function BookingRoutes() {
     return slots()[0];
   });
   const shown = createMemo(() => (data()?.routes ?? []).filter((route) => route.slot === slot()));
+  const colors = createMemo(() => routeColors(shown()));
+  const [opened, setOpened] = createSignal<string>();
+  const [mapShown, setMapShown] = createSignal(false);
+  const highlighted = createMemo(() => {
+    const open = opened();
+    if (open && shown().some((route) => route.key === open)) return open;
+    return shown().find((route) => route.mine)?.key;
+  });
 
   return (
     <div class="flex flex-1 flex-col px-5 pb-[max(1.75rem,env(safe-area-inset-bottom))]">
       <Title>{`시간대별 노선 - ${env.VITE_APP_NAME}`}</Title>
       <Header
         title="시간대별 노선"
-        description="지금까지의 사전 신청으로 생긴 노선이에요. 탑승 1시간 전에 정해지고, 그 전에는 신청에 따라 바뀔 수 있어요."
-        onBackClick={() => nav("/booking")}
+        description="지금까지의 사전 신청으로 생긴 노선이에요. 탑승 30분 전에 정해지고, 그 전에는 신청에 따라 바뀔 수 있어요."
+        onBackClick={() => (window.history.length > 1 ? window.history.back() : nav("/booking"))}
       />
       <Errored
         fallback={(_, reset) => (
@@ -70,7 +79,7 @@ export default function BookingRoutes() {
                         active={item().night === current().night}
                         onClick={() => {
                           setPicked(undefined);
-                          setParams({ night: item().night, slot: undefined });
+                          setParams({ night: item().night, slot: undefined }, { replace: true });
                         }}
                       >
                         {formatDate(item().night)}
@@ -105,7 +114,7 @@ export default function BookingRoutes() {
                           ]}
                           onClick={() => {
                             setPicked(clock);
-                            setParams({ slot: clock });
+                            setParams({ slot: clock }, { replace: true });
                           }}
                         >
                           {clock}
@@ -117,11 +126,33 @@ export default function BookingRoutes() {
                     </For>
                   </div>
 
+                  <PlanMap
+                    buses={shown()}
+                    selected={highlighted()}
+                    class="mt-4 h-64"
+                    label={`${slot()} 출발 노선 ${shown().length}개의 지도`}
+                    fallback={null}
+                    onLoad={setMapShown}
+                  />
+                  <Show when={mapShown()}>
+                    <p class="mt-2 px-1 text-sm font-medium break-keep text-sand-11">
+                      검은 점은 타는 곳, 흰 점은 내리는 곳이에요. 노선을 펼치면 지도에서 그 노선이 노랗게 보여요.
+                    </p>
+                  </Show>
+
                   <ul class="mt-4 flex flex-col gap-y-2.5">
                     <For each={shown()} keyed={(route) => route.key}>
                       {(route) => (
                         <li>
-                          <RouteCard route={route()} />
+                          <RouteCard
+                            route={route()}
+                            color={mapShown() ? colors().get(route().key) : undefined}
+                            onToggle={(open) =>
+                              setOpened((current) =>
+                                open ? route().key : current === route().key ? undefined : current,
+                              )
+                            }
+                          />
                         </li>
                       )}
                     </For>
@@ -155,16 +186,28 @@ function Chip(props: { active: boolean; onClick: () => void; children: unknown }
   );
 }
 
-function RouteCard(props: { route: NightRoute }) {
+function RouteCard(props: { route: NightRoute; color?: string; onToggle: (open: boolean) => void }) {
   const boards = () => props.route.stops.filter((stop) => stop.kind === "board").length;
   const first = () => props.route.stops[0];
   const last = () => props.route.stops.at(-1)!;
 
   return (
-    <details class="group rounded-2xl border border-sand-4 bg-sand-2">
+    <details
+      class="group rounded-2xl border border-sand-4 bg-sand-2"
+      onToggle={(e) => props.onToggle(e.currentTarget.open)}
+    >
       <summary class="flex cursor-pointer list-none flex-col gap-y-1.5 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
         <span class="flex items-center gap-x-2">
           <span class="text-lg font-bold tabular-nums">{formatClock(props.route.departs)}</span>
+          <Show when={props.color}>
+            {(color) => (
+              <span
+                aria-hidden="true"
+                class="h-1.5 w-5 shrink-0 rounded-full"
+                style={{ "background-color": color() }}
+              />
+            )}
+          </Show>
           <RouteChip name={props.route.name} quiet />
           <Show
             when={props.route.fixed}

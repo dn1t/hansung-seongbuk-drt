@@ -28,8 +28,8 @@ const PRIORITY_SETTINGS: Record<PlanPriority, Partial<PlanSettings>> = {
 };
 
 export const DEFAULT_SERVICE: ServiceSettings = {
-  firstSlot: "23:00",
-  lastSlot: "03:30",
+  firstSlot: "00:00",
+  lastSlot: "05:00",
   capacity: PLAN_SETTINGS.capacity,
   maxWalkMeters: PLAN_SETTINGS.maxWalkMeters,
   maxRideMinutes: PLAN_SETTINGS.maxRideMinutes,

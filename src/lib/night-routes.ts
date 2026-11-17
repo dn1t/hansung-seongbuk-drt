@@ -18,6 +18,9 @@ export interface NightRouteStop {
   name: string;
   kind: "board" | "alight";
   at: number;
+  lat: number;
+  lng: number;
+  riders: number;
 }
 
 export interface NightRoute {
@@ -115,7 +118,16 @@ async function routesOf(night: string, booking: { id: string } | undefined, home
       capacity: bus.capacity,
       nearHome: nearHome(bus.stops),
       mine: bus.id === seat?.busId,
-      stops: bus.stops.map((stop) => ({ name: stop.name, kind: stop.kind, at: bus.departs + stop.offset * MINUTE })),
+      stops: bus.stops.map((stop) => ({
+        name: stop.name,
+        kind: stop.kind,
+        at: bus.departs + stop.offset * MINUTE,
+        lat: stop.lat,
+        lng: stop.lng,
+        riders: state.seats.filter(
+          (s) => s.busId === bus.id && (stop.kind === "board" ? s.boardSeq : s.alightSeq) === stop.seq,
+        ).length,
+      })),
     };
     if (seat && route.mine) {
       const board = bus.stops.findIndex((stop) => stop.seq === seat.boardSeq);
@@ -137,10 +149,13 @@ async function routesOf(night: string, booking: { id: string } | undefined, home
       capacity: preview.settings.capacity,
       nearHome: nearHome(bus.route.stops.map((stop) => ({ kind: stop.kind, ...stop.place }))),
       mine: own !== undefined,
-      stops: bus.route.stops.map((stop) => ({
+      stops: bus.route.stops.map((stop, seq) => ({
         name: stop.place.name,
         kind: stop.kind,
         at: departs + stop.offset * MINUTE,
+        lat: stop.place.lat,
+        lng: stop.place.lng,
+        riders: bus.route.seats.filter((s) => (stop.kind === "board" ? s.board : s.alight) === seq).length,
       })),
     };
     if (own) {

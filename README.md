@@ -78,7 +78,7 @@ Free plan limits to keep in mind: 10 CPU hours and 150 GiB-hours of memory a mon
 Demo riders are flagged `users.demo` and every operator screen counts them apart from real students. They can also be made or cleared from /operator/survey without the script.
 
 1. Point `TURSO_CONNECTION_URL` at a local file (`file:local.db`), run `pnpm migrate`, then `pnpm seed:demo`, and start the app with `pnpm dev`. When `DEMO_TIME` has a date, the seed fills that night. The seed refuses a remote database unless you pass `--remote`. `--night 2026-12-08` and `--riders 200` pick another night and size, and `--days 5` fills that many nights in a row (riders keep the same homes, about 85% ride each night); `--student` also creates a student you can log in as (`demo.student@hansung.ac.kr` / `drtdemo2026`, or `--email` / `--password`) with a booking tonight and booking emails turned off. `--clear` removes the demo riders and that student.
-2. Sign up as a student (school email, code, name and password, home address, then the 이용 계획 survey) and book an upcoming night. Each slot's booking closes 1 hour before it leaves, and its routes are fixed the first time anyone opens the night after that; later slots stay a preview. To show a night's buses during the day, set `DEMO_TIME`.
+2. Sign up as a student (school email, code, name and password, home address, then the 이용 계획 survey) and book an upcoming night. Each slot's booking closes 30 minutes before it leaves, and its routes are fixed the first time anyone opens the night after that; later slots stay a preview. To show a night's buses during the day, set `DEMO_TIME`.
 3. Open /operator with `STAFF_CODE`:
    - 노선 shows the generated plan.
    - 탑승 확인 is the QR reader for a phone. It needs HTTPS for the camera.

@@ -27,7 +27,7 @@ export default function BookingTab() {
       </div>
       <p class="mt-2 px-1 font-medium text-balance break-keep text-sand-11">
         운행일 밤에 탈 시간을 미리 신청하면, 신청한 학생들의 집 방향으로 그날 노선이 생겨요. 날짜와 시간, 가는 곳은 탑승
-        1시간 전까지 바꿀 수 있어요.
+        30분 전까지 바꿀 수 있어요.
       </p>
       <Errored
         fallback={(_, reset) => (

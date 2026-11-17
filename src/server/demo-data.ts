@@ -13,8 +13,20 @@ export const DEMO_EMAIL_PREFIX = "demo.rider.";
 export const DEMO_ADDRESS = "예시 주소";
 export const DEMO_MAX = 500;
 
-export const DEMO_SLOTS = ["23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", "03:30"];
-export const DEMO_SLOT_WEIGHTS = [2, 3, 6, 8, 10, 10, 8, 6, 4, 2];
+export const DEMO_SLOTS = [
+  "00:00",
+  "00:30",
+  "01:00",
+  "01:30",
+  "02:00",
+  "02:30",
+  "03:00",
+  "03:30",
+  "04:00",
+  "04:30",
+  "05:00",
+];
+export const DEMO_SLOT_WEIGHTS = [6, 8, 10, 10, 9, 7, 5, 4, 3, 2, 1];
 
 const DOMAINS = Object.keys(SCHOOLS);
 

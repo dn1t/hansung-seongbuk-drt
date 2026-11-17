@@ -70,7 +70,7 @@ export default function BookingDetail() {
                   title={`${formatNight(current().night)} 밤`}
                   description={
                     current().locked
-                      ? "탑승 1시간 전이 지나 노선이 정해졌어요. 시간과 가는 곳은 바꿀 수 없고, 못 타게 되면 취소해 주세요."
+                      ? "탑승 30분 전이 지나 노선이 정해졌어요. 시간과 가는 곳은 바꿀 수 없고, 못 타게 되면 취소해 주세요."
                       : `${formatClock(current().closesAt)}까지 시간이나 가는 곳을 바꿀 수 있어요. 날짜를 바꾸려면 이 신청을 취소하고 새로 신청해 주세요.`
                   }
                   onBackClick={() => nav("/booking")}

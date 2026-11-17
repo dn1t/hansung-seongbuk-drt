@@ -69,7 +69,7 @@ export function BusDetail(props: { option: BusOption; now: number }) {
         </button>
       </Show>
       <p class="mt-5 px-1 text-sm font-medium break-keep text-sand-11">
-        노선은 탑승 1시간 전에 신청한 학생들의 집 방향으로 정해졌어요. 탄 학생이 아무도 내리지 않는 정류장은 지나칠 수
+        노선은 탑승 30분 전에 신청한 학생들의 집 방향으로 정해졌어요. 탄 학생이 아무도 내리지 않는 정류장은 지나칠 수
         있어요.
       </p>
     </div>

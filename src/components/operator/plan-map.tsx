@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import { createEffect, createSignal, onSettled, Show } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
@@ -34,7 +35,14 @@ export function routeColors(buses: { key: string }[]) {
   return new Map(buses.map((bus, i) => [bus.key, many ? ROUTE : ROUTE_COLORS[i]]));
 }
 
-export function PlanMap(props: { buses: MapBus[]; selected?: string; class?: string; label: string }) {
+export function PlanMap(props: {
+  buses: MapBus[];
+  selected?: string;
+  class?: string;
+  label: string;
+  fallback?: JSX.Element;
+  onLoad?: (loaded: boolean) => void;
+}) {
   let container: HTMLDivElement | undefined;
   const [ready, setReady] = createSignal<{ maps: Maps; map: KakaoMap }>();
   const [failed, setFailed] = createSignal(false);
@@ -54,8 +62,12 @@ export function PlanMap(props: { buses: MapBus[]; selected?: string; class?: str
           scrollwheel: false,
         }) as unknown as KakaoMap;
         setReady({ maps, map });
+        props.onLoad?.(true);
       })
-      .catch(() => setFailed(true));
+      .catch(() => {
+        setFailed(true);
+        props.onLoad?.(false);
+      });
     const resize = new ResizeObserver(() => ready()?.map.relayout());
     resize.observe(el);
     return () => {
@@ -129,9 +141,13 @@ export function PlanMap(props: { buses: MapBus[]; selected?: string; class?: str
     <Show
       when={env.VITE_KAKAO_JS_KEY && !failed()}
       fallback={
-        <p class="rounded-2xl border border-sand-4 bg-sand-2 px-5 py-4 text-sm font-medium break-keep text-sand-11">
-          지도를 불러오지 못했어요. VITE_KAKAO_JS_KEY와 카카오 개발자 사이트에 등록한 도메인을 확인해 주세요.
-        </p>
+        "fallback" in props ? (
+          props.fallback
+        ) : (
+          <p class="rounded-2xl border border-sand-4 bg-sand-2 px-5 py-4 text-sm font-medium break-keep text-sand-11">
+            지도를 불러오지 못했어요. VITE_KAKAO_JS_KEY와 카카오 개발자 사이트에 등록한 도메인을 확인해 주세요.
+          </p>
+        )
       }
     >
       <div

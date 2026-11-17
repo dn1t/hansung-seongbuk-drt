@@ -306,7 +306,7 @@ describe("adjustDepartures", () => {
   it("moves a quiet bus earlier after a busy one", () => {
     const result = adjustDepartures([bus("a", 0, 120, 20), bus("b", 1, 150, 5)], now, DISPATCH_SETTINGS);
     assert.equal(result.get("a"), 120 * MIN);
-    assert.equal(result.get("b"), 135 * MIN);
+    assert.equal(result.get("b"), 140 * MIN);
   });
 
   it("leaves balanced buses alone", () => {
@@ -315,16 +315,16 @@ describe("adjustDepartures", () => {
   });
 
   it("does not touch a bus about to leave", () => {
-    const result = adjustDepartures([bus("a", 0, 0, 20), bus("b", 1, 20, 2)], now, DISPATCH_SETTINGS);
-    assert.equal(result.get("b"), 20 * MIN);
+    const result = adjustDepartures([bus("a", 0, 0, 20), bus("b", 1, 10, 2)], now, DISPATCH_SETTINGS);
+    assert.equal(result.get("b"), 10 * MIN);
   });
 
   it("keeps the minimum gap and never moves into the frozen window", () => {
     const tight = { ...DISPATCH_SETTINGS, shiftMinutes: 40 };
     const result = adjustDepartures([bus("a", 0, 120, 25), bus("b", 1, 150, 1)], now, tight);
     assert.equal(result.get("b"), 130 * MIN);
-    const late = adjustDepartures([bus("a", 0, 20, 25), bus("b", 1, 45, 1)], now, DISPATCH_SETTINGS);
-    assert.equal(late.get("b"), 30 * MIN);
+    const late = adjustDepartures([bus("a", 0, 0, 25), bus("b", 1, 20, 1)], now, tight);
+    assert.equal(late.get("b"), 15 * MIN);
   });
 
   it("puts a bus back when demand evens out", () => {

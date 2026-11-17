@@ -59,7 +59,7 @@ export default function BookingTime() {
         <p class="mt-3 px-1 text-sm font-medium break-keep text-sand-11">
           숫자는 지금까지의 신청으로 생긴 노선 수예요{nights().length > 1 ? "(고른 날 중 가장 많은 날 기준)" : ""}.
           노선이 없는 시간도 고를 수 있어요. 신청한 학생이 모이면 그 시간에 노선이 생겨요.
-          <Show when={closed().length > 0}> 탑승 1시간 전이 지난 시간은 고를 수 없어요.</Show>
+          <Show when={closed().length > 0}> 탑승 30분 전이 지난 시간은 고를 수 없어요.</Show>
         </p>
         <Footer
           type="button"

@@ -167,7 +167,7 @@ export default function OperatorNights() {
           <header class="px-1">
             <h1 class="text-3xl font-bold">운행일</h1>
             <p class="mt-2 font-medium text-balance break-keep text-sand-11">
-              날짜를 누르면 운행일에 넣거나 빼요. 학생은 운행일마다 탑승 1시간 전까지 사전 신청할 수 있어요.
+              날짜를 누르면 운행일에 넣거나 빼요. 학생은 운행일마다 탑승 30분 전까지 사전 신청할 수 있어요.
             </p>
             <p class="mt-4 text-sm font-medium text-sand-11 tabular-nums">
               다가오는 운행일 <b class="font-bold text-sand-12">{upcoming().length}일</b>
@@ -345,7 +345,7 @@ function MonthButton(props: { label: string; onClick: () => void; children: JSX.
 }
 
 function DemoBookings(props: { data: NightsData }) {
-  const [night, setNight] = createSignal<string>();
+  const [picked, setPicked] = createSignal<string[]>([]);
   const [count, setCount] = createSignal(String(DEMO_DEFAULT));
   const [busy, setBusy] = createSignal<string>();
   const [confirming, setConfirming] = createSignal<string>();
@@ -353,30 +353,41 @@ function DemoBookings(props: { data: NightsData }) {
 
   const open = () => props.data.nights.filter((n) => n.demoOpen);
   const withDemo = () => props.data.nights.filter((n) => n.night >= props.data.today && n.demo > 0);
-  const target = () => {
-    const picked = night();
-    return open().some((n) => n.night === picked) ? picked : open()[0]?.night;
-  };
+  const chosen = () =>
+    open()
+      .filter((n) => picked().includes(n.night))
+      .map((n) => n.night);
+  const allChosen = () => open().length > 0 && chosen().length === open().length;
   const size = () => Math.round(Number(count()));
-  const ready = () => target() !== undefined && size() >= 1 && size() <= props.data.demoMax;
+  const ready = () => chosen().length > 0 && size() >= 1 && size() <= props.data.demoMax;
+
+  function toggle(night: string) {
+    setPicked((current) => (current.includes(night) ? current.filter((n) => n !== night) : [...current, night]));
+  }
 
   async function add() {
-    const chosen = target();
-    if (!chosen) return;
+    const nights = chosen();
+    if (nights.length === 0) return;
     setStatus(undefined);
     setBusy("add");
-    const result = await addDemoBookings({ night: chosen, count: size() });
+    const result = await addDemoBookings({ nights, count: size() });
     setBusy(undefined);
-    setStatus(
-      result.ok
-        ? {
-            kind: "saved",
-            text: `${formatNight(chosen)}에 데모 신청 ${result.added}명을 넣었어요.${
-              result.kept ? ` 노선이 정해진 시간대의 ${result.kept}명은 그대로 뒀어요.` : ""
-            }`,
-          }
-        : { kind: "error", text: result.message },
-    );
+    if (!result.ok) {
+      setStatus({ kind: "error", text: result.message });
+      return;
+    }
+    setPicked([]);
+    const where = nights.length === 1 ? formatNight(nights[0]) : `${result.nights}일`;
+    setStatus({
+      kind: "saved",
+      text: [
+        `${where}에 데모 신청 ${result.added}명을 넣었어요.`,
+        result.kept ? `노선이 정해진 시간대의 ${result.kept}명은 그대로 뒀어요.` : "",
+        result.skipped ? `모든 시간대가 마감된 ${result.skipped}일은 건너뛰었어요.` : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
   }
 
   async function clear(target: string) {
@@ -397,62 +408,89 @@ function DemoBookings(props: { data: NightsData }) {
       <SectionRule title="데모 신청" class="mt-10" />
       <p class="mt-4 px-1 font-medium text-balance break-keep text-sand-11">
         실제 운행일에 데모 학생의 사전 신청을 넣어요. 노선과 배차가 이 신청까지 합쳐서 만들어지고, 데모 학생에게는
-        메일이 가지 않아요. 탑승 1시간 전이 지난 시간대에는 넣지 않아요.
+        메일이 가지 않아요. 탑승 30분 전이 지난 시간대에는 넣지 않아요.
       </p>
       <Show
         when={open().length > 0}
         fallback={<p class="mt-3 px-1 font-medium break-keep text-sand-11">신청을 넣을 수 있는 운행일이 없어요.</p>}
       >
         <form
-          class="mt-4 flex flex-wrap items-end gap-3"
+          class="mt-4 flex flex-col gap-y-4"
           onSubmit={(e) => {
             e.preventDefault();
             void add();
           }}
         >
-          <label class="flex flex-col gap-y-1.5">
-            <span class="ml-1 text-sm font-semibold text-sand-11">운행일</span>
-            <select
-              class="h-13 cursor-pointer rounded-xl border border-sand-5 bg-sand-2 px-4 text-lg tabular-nums focus:border-amber-8 focus:ring-2 focus:ring-amber-5 focus:outline-none"
-              onChange={(e) => setNight(e.currentTarget.value)}
-            >
+          <fieldset>
+            <legend class="flex w-full items-center justify-between px-1">
+              <span class="text-sm font-semibold text-sand-11">
+                운행일 <span class="tabular-nums">{chosen().length > 0 ? `· ${chosen().length}일 골랐어요` : ""}</span>
+              </span>
+              <button
+                type="button"
+                class="cursor-pointer text-sm font-semibold text-amber-11"
+                onClick={() => setPicked(allChosen() ? [] : open().map((n) => n.night))}
+              >
+                {allChosen() ? "모두 해제" : "모두 고르기"}
+              </button>
+            </legend>
+            <ul class="mt-2 flex flex-wrap gap-2">
               <For each={open()} keyed={(n) => n.night}>
-                {(n) => (
-                  <option value={n().night} selected={n().night === target()}>
-                    {formatNight(n().night)}
-                    {n().demo > 0 ? ` · 데모 ${n().demo}명` : ""}
-                  </option>
-                )}
+                {(n) => {
+                  const on = () => picked().includes(n().night);
+                  return (
+                    <li>
+                      <button
+                        type="button"
+                        aria-pressed={on() ? "true" : "false"}
+                        class={[
+                          "flex h-13 cursor-pointer flex-col items-start justify-center rounded-xl border px-3.5 tabular-nums transition-colors",
+                          on()
+                            ? "border-amber-8 bg-amber-3 text-amber-11 ring-2 ring-amber-5"
+                            : "border-sand-5 bg-sand-2 hover:bg-sand-3",
+                        ]}
+                        onClick={() => toggle(n().night)}
+                      >
+                        <span class="text-sm leading-5 font-bold">{formatNight(n().night)}</span>
+                        <span class={["text-xs leading-4 font-medium", on() ? "text-amber-11" : "text-sand-11"]}>
+                          {n().demo > 0 ? `데모 ${n().demo}명 있음` : "데모 없음"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                }}
               </For>
-            </select>
-          </label>
-          <label class="flex w-32 flex-col gap-y-1.5">
-            <span class="ml-1 text-sm font-semibold text-sand-11">학생 수</span>
-            <span class="flex h-13 items-center rounded-xl border border-sand-5 bg-sand-2 pr-4 focus-within:border-amber-8 focus-within:ring-2 focus-within:ring-amber-5">
-              <input
-                type="number"
-                inputmode="numeric"
-                min="1"
-                max={props.data.demoMax}
-                step="1"
-                required
-                value={count()}
-                class="h-full min-w-0 flex-1 rounded-xl bg-transparent px-4 text-lg tabular-nums caret-amber-9 focus:outline-none"
-                onInput={(e) => setCount(e.currentTarget.value)}
-              />
-              <span class="shrink-0 font-semibold text-sand-11">명</span>
-            </span>
-          </label>
-          <Button
-            type="submit"
-            class="w-36"
-            variant={busy() === "add" ? "loading" : ready() ? "secondary" : "disabled"}
-          >
-            신청 넣기
-          </Button>
+            </ul>
+          </fieldset>
+          <div class="flex flex-wrap items-end gap-3">
+            <label class="flex w-32 flex-col gap-y-1.5">
+              <span class="ml-1 text-sm font-semibold text-sand-11">학생 수</span>
+              <span class="flex h-13 items-center rounded-xl border border-sand-5 bg-sand-2 pr-4 focus-within:border-amber-8 focus-within:ring-2 focus-within:ring-amber-5">
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  max={props.data.demoMax}
+                  step="1"
+                  required
+                  value={count()}
+                  class="h-full min-w-0 flex-1 rounded-xl bg-transparent px-4 text-lg tabular-nums caret-amber-9 focus:outline-none"
+                  onInput={(e) => setCount(e.currentTarget.value)}
+                />
+                <span class="shrink-0 font-semibold text-sand-11">명</span>
+              </span>
+            </label>
+            <Button
+              type="submit"
+              class="w-44"
+              variant={busy() === "add" ? "loading" : ready() ? "secondary" : "disabled"}
+            >
+              {chosen().length > 1 ? `${chosen().length}일에 신청 넣기` : "신청 넣기"}
+            </Button>
+          </div>
         </form>
         <p class="mt-3 px-1 text-sm font-medium break-keep text-sand-11">
-          이미 데모 신청이 있는 날은 아직 마감되지 않은 시간대의 신청을 새로 바꿔요.
+          여러 날을 한 번에 고를 수 있어요. 이미 데모 신청이 있는 날은 노선이 정해진 신청만 남기고 새로 바꿔요.
         </p>
       </Show>
       <Show when={withDemo().length > 0}>

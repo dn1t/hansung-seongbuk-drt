@@ -29,7 +29,7 @@ Object.assign(process.env, {
   STAFF_CODE: "",
   ROUTE_TIMES: "estimate",
   WALK_TIMES: "estimate",
-  DEMO_TIME: "22:30",
+  DEMO_TIME: "00:00",
 });
 
 let vite: ViteDevServer;
@@ -98,7 +98,7 @@ async function seed(night: string) {
     });
     await db.execute({
       sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values (?, ?, ?, ?, 'x', ?, ?)",
-      args: [`booking-${i}`, id, night, i < 20 ? "23:00" : i < 32 ? "23:30" : "01:00", lat + 0.001, lng],
+      args: [`booking-${i}`, id, night, i < 20 ? "00:00" : i < 32 ? "00:30" : "02:00", lat + 0.001, lng],
     });
   }
   db.close();
@@ -131,8 +131,8 @@ describe("a night end to end", () => {
     const state = await plans.loadNight(night);
     assert.ok(state.buses.length >= 1);
     assert.equal(state.seats.length, 32);
-    assert.ok(state.buses.every((bus) => bus.slot === "23:00" || bus.slot === "23:30"));
-    assert.equal(await plans.frozenUntil(night), "23:30");
+    assert.ok(state.buses.every((bus) => bus.slot === "00:00" || bus.slot === "00:30"));
+    assert.equal(await plans.frozenUntil(night), "00:30");
     assert.equal(await plans.ensurePlan(night), true);
     assert.equal((await plans.loadNight(night)).buses.length, state.buses.length);
   });
@@ -145,11 +145,11 @@ describe("a night end to end", () => {
       ["booking-32", "booking-33", "booking-34", "booking-35"],
     );
     assert.ok(preview.result.buses.length >= 1);
-    assert.ok(preview.result.buses.every((bus) => !plans.isFrozen("23:30", bus.slot)));
+    assert.ok(preview.result.buses.every((bus) => !plans.isFrozen("00:30", bus.slot)));
     assert.equal(preview.result.buses.flatMap((bus) => bus.route.seats).length, 4);
     const later = await rides.tonightFor(rider(32));
     assert.equal(later.kind, "booked");
-    assert.ok(later.kind === "booked" && later.fixesAt === clock.slotCutoff(night, "01:00"));
+    assert.ok(later.kind === "booked" && later.fixesAt === clock.slotCutoff(night, "02:00"));
   });
 
   it("keeps a night's preview until its bookings change", async () => {
@@ -181,14 +181,14 @@ describe("a night end to end", () => {
   });
 
   it("lists buses from the student's school and lets them choose one", async () => {
-    const options = await rides.busOptionsFor(rider(0), "school-7", "23:00", "23:30");
+    const options = await rides.busOptionsFor(rider(0), "school-7", "00:00", "00:30");
     assert.ok(options && options.options.length > 0);
     const option = options.options[0];
     const alight = option.stops[option.alightIndex].id;
     const result = await rides.chooseRideFor(rider(0), {
       start: "school-7",
-      from: "23:00",
-      to: "23:30",
+      from: "00:00",
+      to: "00:30",
       bus: option.busId,
       alight,
     });
@@ -202,8 +202,8 @@ describe("a night end to end", () => {
       { id: "nobody", email: "nobody@hansung.ac.kr" },
       {
         start: "school-7",
-        from: "23:00",
-        to: "23:30",
+        from: "00:00",
+        to: "00:30",
         bus: "x",
         alight: "1",
       },
@@ -214,14 +214,14 @@ describe("a night end to end", () => {
   it("moves a quiet bus earlier after a busy one", async () => {
     const night = clock.tonight();
     const state = await plans.loadNight(night);
-    const early = state.buses.find((bus) => bus.slot === "23:00");
-    const late = state.buses.find((bus) => bus.slot === "23:30");
+    const early = state.buses.find((bus) => bus.slot === "00:00");
+    const late = state.buses.find((bus) => bus.slot === "00:30");
     assert.ok(early && late, "both slots should have a bus");
     const db = createClient({ url });
     const lateSeats = state.seats.filter((seat) => seat.busId === late.id).slice(0, 6);
     for (const seat of lateSeats) {
       await db.execute({
-        sql: "insert into ride_choices (user_id, night, bus_id, start_id, from_slot, to_slot, board_seq, alight_seq) values (?, ?, ?, 'school-7', '23:00', '23:00', 0, ?) on conflict do nothing",
+        sql: "insert into ride_choices (user_id, night, bus_id, start_id, from_slot, to_slot, board_seq, alight_seq) values (?, ?, ?, 'school-7', '00:00', '00:00', 0, ?) on conflict do nothing",
         args: [seat.userId, night, early.id, early.stops.at(-1)!.seq],
       });
     }
@@ -249,7 +249,7 @@ describe("a night end to end", () => {
     const db = createClient({ url });
     await db.execute("insert into plans (night, settings, riders, unplaced) values ('2026-01-05', '{}', 1, 0)");
     await db.execute(
-      "insert into bookings (id, user_id, night, slot, address, lat, lng) values ('past', 'rider-1', '2026-01-05', '23:00', 'x', 37.6, 127.0)",
+      "insert into bookings (id, user_id, night, slot, address, lat, lng) values ('past', 'rider-1', '2026-01-05', '00:00', 'x', 37.6, 127.0)",
     );
     db.close();
     assert.equal(await noShow.bookingBlock("rider-1"), undefined);
@@ -264,7 +264,7 @@ describe("a night end to end", () => {
       args: [lastWeek],
     });
     await again.execute({
-      sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values ('recent', 'rider-1', ?, '23:00', 'x', 37.6, 127.0)",
+      sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values ('recent', 'rider-1', ?, '00:00', 'x', 37.6, 127.0)",
       args: [lastWeek],
     });
     again.close();
@@ -275,18 +275,18 @@ describe("a night end to end", () => {
   });
 
   it("stops day-of choices inside the operator's deadline", async () => {
-    const before = (await rides.busOptionsFor(rider(5), "school-7", "23:00", "23:30"))!;
+    const before = (await rides.busOptionsFor(rider(5), "school-7", "00:00", "00:30"))!;
     await service.saveServiceSettings({ ...service.DEFAULT_SERVICE, dayOfCutoffMinutes: 60 });
     const deadline = before.now + 60 * 60_000;
-    const after = (await rides.busOptionsFor(rider(5), "school-7", "23:00", "23:30"))!;
+    const after = (await rides.busOptionsFor(rider(5), "school-7", "00:00", "00:30"))!;
     assert.ok(after.options.every((option) => option.stops[option.boardIndex].at > deadline));
     assert.ok(after.options.length <= before.options.length);
     const tooSoon = before.options.find((option) => option.stops[option.boardIndex].at <= deadline);
     if (tooSoon) {
       const result = await rides.chooseRideFor(rider(5), {
         start: "school-7",
-        from: "23:00",
-        to: "23:30",
+        from: "00:00",
+        to: "00:30",
         bus: tooSoon.busId,
         alight: tooSoon.stops[tooSoon.alightIndex].id,
       });
@@ -334,13 +334,13 @@ describe("a night end to end", () => {
         args: [night],
       });
       await db.execute({
-        sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values (?, 'rider-2', ?, '23:00', 'x', 37.6, 127.0)",
+        sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values (?, 'rider-2', ?, '00:00', 'x', 37.6, 127.0)",
         args: [`history-${i}`, night],
       });
     }
     const state = await plans.loadNight(clock.tonight());
     await db.execute({
-      sql: "insert into buses (id, night, slot, name, bearing, planned_departs, departs, capacity) values ('history-bus', ?, '23:00', 'x', 0, 0, 0, 28)",
+      sql: "insert into buses (id, night, slot, name, bearing, planned_departs, departs, capacity) values ('history-bus', ?, '00:00', 'x', 0, 0, 0, 28)",
       args: [nights[0]],
     });
     await db.execute({
@@ -364,10 +364,10 @@ describe("a night end to end", () => {
     db.close();
     const points = await rides.startPointsFor(rider(8));
     assert.ok(points.points.some((point) => point.id === "area-test" && point.kind === "area"));
-    const near = await rides.busOptionsFor(rider(8), "area-test", "23:00", "23:30");
+    const near = await rides.busOptionsFor(rider(8), "area-test", "00:00", "00:30");
     assert.ok((near?.options.length ?? 0) > 0);
     assert.ok(near!.options.every((option) => option.walkToStop <= 15));
-    const far = await rides.busOptionsFor(rider(8), "area-far", "23:00", "23:30");
+    const far = await rides.busOptionsFor(rider(8), "area-far", "00:00", "00:30");
     assert.equal(far?.options.length, 0);
     assert.equal(far?.passesStart, false);
     assert.equal(near?.passesStart, true);
@@ -375,12 +375,12 @@ describe("a night end to end", () => {
 
   it("frees the seat and the day-of choice when a booking is cancelled", async () => {
     const night = clock.tonight();
-    const options = (await rides.busOptionsFor(rider(10), "school-7", "23:00", "23:30"))!;
+    const options = (await rides.busOptionsFor(rider(10), "school-7", "00:00", "00:30"))!;
     const option = options.options[0];
     const chosen = await rides.chooseRideFor(rider(10), {
       start: "school-7",
-      from: "23:00",
-      to: "23:30",
+      from: "00:00",
+      to: "00:30",
       bus: option.busId,
       alight: option.stops[option.alightIndex].id,
     });
@@ -402,7 +402,7 @@ describe("a night end to end", () => {
     await db.execute({ sql: "insert into operating_nights (night) values (?)", args: [night] });
     for (let i = 0; i < 12; i++) {
       await db.execute({
-        sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values (?, ?, ?, '01:00', 'x', 37.6553, 127.0613)",
+        sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values (?, ?, ?, '02:00', 'x', 37.6553, 127.0613)",
         args: [`race-${i}`, `rider-${i + 11}`, night],
       });
     }
@@ -417,7 +417,7 @@ describe("a night end to end", () => {
 
   it("never overfills a bus when two students take the last seat together", async () => {
     const night = clock.tonight();
-    const options = (await rides.busOptionsFor(rider(12), "school-7", "23:00", "23:30"))!;
+    const options = (await rides.busOptionsFor(rider(12), "school-7", "00:00", "00:30"))!;
     const target = options.options.find((option) => !option.mine)!;
     const state = await plans.loadNight(night);
     const load = plans.loadsOf(state).get(target.busId)!;
@@ -432,8 +432,8 @@ describe("a night end to end", () => {
     const choose = (i: number) =>
       rides.chooseRideFor(rider(i), {
         start: "school-7",
-        from: "23:00",
-        to: "23:30",
+        from: "00:00",
+        to: "00:30",
         bus: target.busId,
         alight: target.stops[target.alightIndex].id,
       });
@@ -446,7 +446,7 @@ describe("a night end to end", () => {
   it("adds demo bookings to open slots only and keeps a night that has riders", async () => {
     const night = clock.tonight();
     const open = await demo.openDemoSlots(night);
-    assert.ok(!open.includes("23:00") && !open.includes("23:30") && open.includes("00:00"));
+    assert.ok(!open.includes("00:00") && !open.includes("00:30") && open.includes("01:00"));
     const { added } = await demo.addDemoBookings(night, 30);
     assert.equal(added, 30);
     const db = createClient({ url });
@@ -461,5 +461,23 @@ describe("a night end to end", () => {
 
     assert.equal(await demo.clearDemoBookings(night), 30);
     assert.equal(await plans.hasPlan(night), true, "a night where students chose or boarded keeps its plan");
+  });
+
+  it("adds demo bookings to several nights at once", async () => {
+    const night = clock.tonight();
+    const next = clock.kstDate(Date.parse(`${night}T12:00:00Z`) + 24 * 60 * 60_000);
+    const db = createClient({ url });
+    await db.execute({ sql: "insert into operating_nights (night) values (?) on conflict do nothing", args: [next] });
+    const result = await demo.addDemoBookingsTo([night, next], 10);
+    const rows = await db.execute({
+      sql: "select b.night, count(*) as n from bookings b join users u on u.id = b.user_id where u.demo = 1 and b.night in (?, ?) group by b.night",
+      args: [night, next],
+    });
+    db.close();
+    assert.equal(result.added, 20);
+    assert.deepEqual(result.filled, [night, next]);
+    assert.deepEqual(Object.fromEntries(rows.rows.map((row) => [String(row.night), Number(row.n)])), { [night]: 10, [next]: 10 });
+    await demo.clearDemoBookings(night);
+    await demo.clearDemoBookings(next);
   });
 });

@@ -1,6 +1,6 @@
 import { and, eq, inArray, like, notInArray, sql } from "drizzle-orm";
 
-import { bookings, plans, surveys } from "../lib/app-schema";
+import { bookings, busRiders, plans, surveys } from "../lib/app-schema";
 import { db } from "../lib/db";
 import { users } from "../lib/schema";
 import { serviceNow, slotCutoff } from "./clock";
@@ -137,14 +137,23 @@ export async function openDemoSlots(night: string) {
   return (await serviceSlots()).filter((slot) => slotCutoff(night, slot) > now);
 }
 
-export async function addDemoBookings(night: string, count: number) {
+export async function addDemoBookings(night: string, count: number, options: { saveRiders?: boolean } = {}) {
   const open = await openDemoSlots(night);
   if (open.length === 0) return { added: 0, kept: 0 };
   const riders = demoRiders(count);
-  await saveDemoRiders(riders);
+  if (options.saveRiders ?? true) await saveDemoRiders(riders);
   await db
     .delete(bookings)
-    .where(and(eq(bookings.night, night), inArray(bookings.slot, open), inArray(bookings.userId, demoUsers)));
+    .where(
+      and(
+        eq(bookings.night, night),
+        inArray(bookings.userId, demoUsers),
+        notInArray(
+          bookings.id,
+          db.select({ id: busRiders.bookingId }).from(busRiders).where(eq(busRiders.night, night)),
+        ),
+      ),
+    );
   const kept = await db
     .select({ userId: bookings.userId })
     .from(bookings)
@@ -168,6 +177,20 @@ export async function addDemoBookings(night: string, count: number) {
   if (statements.length > 0) await db.batch(statements as [(typeof statements)[number], ...typeof statements]);
   refreshPreviews([night]);
   return { added: rows.length, kept: taken.size };
+}
+
+export async function addDemoBookingsTo(nights: string[], count: number) {
+  await saveDemoRiders(demoRiders(count));
+  let added = 0;
+  let kept = 0;
+  const filled: string[] = [];
+  for (const night of nights) {
+    const result = await addDemoBookings(night, count, { saveRiders: false });
+    added += result.added;
+    kept += result.kept;
+    if (result.added > 0 || result.kept > 0) filled.push(night);
+  }
+  return { added, kept, filled };
 }
 
 export async function clearDemoBookings(night: string) {

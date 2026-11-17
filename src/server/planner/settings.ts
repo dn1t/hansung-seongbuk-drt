@@ -62,9 +62,9 @@ export const PLAN_SETTINGS: PlanSettings = {
 export const DISPATCH_SETTINGS: DispatchSettings = {
   busyShare: 0.7,
   quietShare: 0.3,
-  shiftMinutes: 15,
+  shiftMinutes: 10,
   minHeadwayMinutes: 10,
-  freezeMinutes: 30,
+  freezeMinutes: 15,
   linkBearingDegrees: 45,
 };
 

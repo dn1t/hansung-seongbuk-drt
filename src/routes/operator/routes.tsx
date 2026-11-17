@@ -94,7 +94,7 @@ export default function OperatorRoutes() {
             <div class="min-w-0">
               <h1 class="text-3xl font-bold">노선</h1>
               <p class="mt-2 font-medium text-balance break-keep text-sand-11">
-                노선은 시간대마다 탑승 1시간 전에 정해져요. 그 전 시간대는 지금까지의 신청으로 미리 볼 수 있어요.
+                노선은 시간대마다 탑승 30분 전에 정해져요. 그 전 시간대는 지금까지의 신청으로 미리 볼 수 있어요.
               </p>
             </div>
             <Show when={plan().nights.length > 0}>
