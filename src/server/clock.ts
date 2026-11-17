@@ -21,10 +21,15 @@ function demoOffset(value: string) {
   return moment === undefined ? 0 : moment - real;
 }
 
-const offset = demoOffset(env.DEMO_TIME ?? "");
+const envOffset = demoOffset(env.DEMO_TIME ?? "");
+let presentationOffset: number | undefined;
+
+export function setPresentationOffset(offset: number | undefined) {
+  presentationOffset = offset;
+}
 
 export function serviceNow() {
-  return Date.now() + offset;
+  return Date.now() + (presentationOffset ?? envOffset);
 }
 
 export function kstToday() {

@@ -135,10 +135,17 @@ await client.batch(
       args: [home.id, home.name, home.email, home.address, home.lat, home.lng],
     })),
     ...answers.map((answer) => ({
-      sql: `insert into surveys (user_id, frequency, slot, start_id, way, fare) values (?, ?, ?, ?, ?, ?)
-            on conflict(user_id) do update set frequency = excluded.frequency, slot = excluded.slot,
-              start_id = excluded.start_id, way = excluded.way, fare = excluded.fare`,
-      args: [answer.userId, answer.frequency, answer.slot, answer.startId, answer.way, answer.fare],
+      sql: `insert into surveys (user_id, frequency, slots, start_id, ways, fare) values (?, ?, ?, ?, ?, ?)
+            on conflict(user_id) do update set frequency = excluded.frequency, slots = excluded.slots,
+              start_id = excluded.start_id, ways = excluded.ways, fare = excluded.fare`,
+      args: [
+        answer.userId,
+        answer.frequency,
+        JSON.stringify(answer.slots),
+        answer.startId,
+        JSON.stringify(answer.ways),
+        answer.fare,
+      ],
     })),
   ],
   "write",
@@ -195,7 +202,7 @@ if (flag("student")) {
         args: [id],
       },
       {
-        sql: `insert into surveys (user_id, frequency, slot, start_id, way, fare) values (?, '2-3', '01:00', 'school-7', 'taxi', '3000')
+        sql: `insert into surveys (user_id, frequency, slots, start_id, ways, fare) values (?, '2-3', '["01:00"]', 'school-7', '["taxi"]', '3000')
               on conflict(user_id) do nothing`,
         args: [id],
       },

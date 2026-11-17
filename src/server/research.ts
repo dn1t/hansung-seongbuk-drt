@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, isNull, or } from "drizzle-orm";
 
-import { surveys } from "../lib/app-schema";
+import { guestSurveys, surveys } from "../lib/app-schema";
 import { db } from "../lib/db";
 import { users } from "../lib/schema";
 import { SCHOOLS, schoolOf } from "../lib/schools";
@@ -17,7 +17,7 @@ import {
   WAY_LABELS,
 } from "../lib/survey-options";
 import { ALL_SLOTS, kstDate, nightClock, serviceNow, slotIndex, slotsBetween, tonight } from "./clock";
-import { boardingPlace, startOfSchool, startPlaces } from "./places";
+import { boardingPlace, planningHome, startOfSchool, startPlaces } from "./places";
 import { nearestDistrict } from "./planner/districts";
 import { assignVehicles } from "./planner/fleet";
 import { distance } from "./planner/geo";
@@ -37,15 +37,16 @@ export type ResearchFilter = "real" | "all" | "demo";
 
 export interface Respondent {
   userId: string;
-  email: string;
+  school: string | undefined;
+  guest: boolean;
   address: string | null;
   lat: number;
   lng: number;
   demo: boolean;
   frequency: SurveyFrequency;
-  slot: string;
+  slots: string[];
   startId: string;
-  way: SurveyWay;
+  ways: SurveyWay[];
   fare: SurveyFare;
   comment: string | null;
   createdAt: number;
@@ -59,7 +60,7 @@ export interface Count {
 
 export interface SurveyReport {
   filter: ResearchFilter;
-  totals: { real: number; demo: number; shown: number; unanswered: number };
+  totals: { real: number; demo: number; guest: number; shown: number; unanswered: number };
   schools: Count[];
   districts: Count[];
   frequency: Count[];
@@ -91,32 +92,55 @@ const STARTS_SHOWN = 8;
 const DAY = 86_400_000;
 
 export async function loadRespondents(): Promise<Respondent[]> {
-  const rows = await db
-    .select({
-      userId: surveys.userId,
-      email: users.email,
-      address: users.homeAddress,
-      lat: users.homeLat,
-      lng: users.homeLng,
-      demo: users.demo,
-      frequency: surveys.frequency,
-      slot: surveys.slot,
-      startId: surveys.startId,
-      way: surveys.way,
-      fare: surveys.fare,
-      comment: surveys.comment,
-      createdAt: surveys.createdAt,
-    })
-    .from(surveys)
-    .innerJoin(users, eq(users.id, surveys.userId))
-    .where(and(isNotNull(users.homeLat), isNotNull(users.homeLng)));
-  return rows.map((row) => ({
-    ...row,
-    demo: row.demo === true,
-    lat: Number(row.lat),
-    lng: Number(row.lng),
-    createdAt: row.createdAt.getTime(),
-  }));
+  const [members, guests] = await Promise.all([
+    db
+      .select({
+        userId: surveys.userId,
+        email: users.email,
+        address: users.homeAddress,
+        lat: users.homeLat,
+        lng: users.homeLng,
+        demo: users.demo,
+        frequency: surveys.frequency,
+        slots: surveys.slots,
+        startId: surveys.startId,
+        ways: surveys.ways,
+        fare: surveys.fare,
+        comment: surveys.comment,
+        createdAt: surveys.createdAt,
+      })
+      .from(surveys)
+      .innerJoin(users, eq(users.id, surveys.userId))
+      .where(and(isNotNull(users.homeLat), isNotNull(users.homeLng))),
+    db.select().from(guestSurveys),
+  ]);
+  return [
+    ...members.map(({ email, ...row }) => ({
+      ...row,
+      school: schoolOf(email),
+      guest: false,
+      demo: row.demo === true,
+      lat: Number(row.lat),
+      lng: Number(row.lng),
+      createdAt: row.createdAt.getTime(),
+    })),
+    ...guests.map((row) => ({
+      userId: `guest:${row.id}`,
+      school: row.school,
+      guest: true,
+      address: row.homeAddress,
+      lat: row.homeLat,
+      lng: row.homeLng,
+      demo: false,
+      frequency: row.frequency,
+      slots: row.slots,
+      startId: row.startId,
+      ways: row.ways,
+      fare: row.fare,
+      comment: row.comment,
+      createdAt: row.createdAt.getTime(),
+    })),
+  ];
 }
 
 export function inFilter(filter: ResearchFilter) {
@@ -164,11 +188,11 @@ export async function surveyReport(filter: ResearchFilter): Promise<SurveyReport
   const schoolNames = Object.values(SCHOOLS) as string[];
   const schoolCounts = new Map<string, number>();
   for (const row of rows) {
-    const school = schoolOf(row.email) ?? "";
+    const school = row.school ?? "";
     schoolCounts.set(school, (schoolCounts.get(school) ?? 0) + 1);
   }
   const windowSlots = await serviceWindow();
-  const slotKeys = [...new Set([...windowSlots, ...rows.map((row) => row.slot)])].sort(
+  const slotKeys = [...new Set([...windowSlots, ...rows.flatMap((row) => row.slots)])].sort(
     (a, b) => slotIndex(a) - slotIndex(b),
   );
 
@@ -187,6 +211,7 @@ export async function surveyReport(filter: ResearchFilter): Promise<SurveyReport
     totals: {
       real: all.filter((row) => !row.demo).length,
       demo: all.filter((row) => row.demo).length,
+      guest: all.filter((row) => row.guest).length,
       shown: rows.length,
       unanswered: unanswered.length,
     },
@@ -197,7 +222,11 @@ export async function surveyReport(filter: ResearchFilter): Promise<SurveyReport
       FREQUENCY_LABELS,
       rows.map((row) => row.frequency),
     ),
-    slots: slotKeys.map((slot) => ({ key: slot, label: slot, count: rows.filter((row) => row.slot === slot).length })),
+    slots: slotKeys.map((slot) => ({
+      key: slot,
+      label: slot,
+      count: rows.filter((row) => row.slots.includes(slot)).length,
+    })),
     starts: ranked(
       rows.map((row) => startLabel(names, row.startId)),
       STARTS_SHOWN,
@@ -205,7 +234,7 @@ export async function surveyReport(filter: ResearchFilter): Promise<SurveyReport
     ways: tally(
       SURVEY_WAYS,
       WAY_LABELS,
-      rows.map((row) => row.way),
+      rows.flatMap((row) => row.ways),
     ),
     fares: tally(
       SURVEY_FARES,
@@ -217,7 +246,7 @@ export async function surveyReport(filter: ResearchFilter): Promise<SurveyReport
       .filter((row) => row.comment)
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, COMMENTS_SHOWN)
-      .map((row) => ({ at: row.createdAt, school: schoolOf(row.email) ?? "", text: row.comment! })),
+      .map((row) => ({ at: row.createdAt, school: row.school ?? "", text: row.comment! })),
   };
 }
 
@@ -228,12 +257,12 @@ export async function surveyRows(filter: ResearchFilter): Promise<SurveyRow[]> {
     .sort((a, b) => a.createdAt - b.createdAt)
     .map((row) => ({
       answeredAt: row.createdAt,
-      school: schoolOf(row.email) ?? "",
+      school: row.school ?? "",
       district: districtOfHome(row),
       frequency: FREQUENCY_LABELS[row.frequency],
-      slot: row.slot,
+      slot: row.slots.join(", "),
       start: startLabel(names, row.startId),
-      way: WAY_LABELS[row.way],
+      way: row.ways.map((way) => WAY_LABELS[way]).join(", "),
       fare: FARE_LABELS[row.fare],
       comment: row.comment ?? "",
       demo: row.demo,
@@ -366,13 +395,13 @@ export async function researchPlan(raw: Partial<ResearchPlanInput>): Promise<Res
   );
   const demoIds = new Set(chosen.filter((row) => row.demo).map((row) => row.userId));
   const riders = chosen.flatMap((row) => {
-    const start = placeOf.get(row.startId) ?? startOfSchool(schoolOf(row.email));
+    const start = placeOf.get(row.startId) ?? startOfSchool(row.school);
     if (!start || window.length === 0) return [];
     return [
       {
         id: row.userId,
-        slot: nearestSlot(row.slot, window),
-        home: { lat: row.lat, lng: row.lng },
+        slot: nearestSlot(row.slots[Math.floor(rideRoll(`${row.userId}:slot`) * row.slots.length)] ?? "", window),
+        home: planningHome(row.address, { lat: row.lat, lng: row.lng }, candidates),
         board: boardingPlace(start, candidates),
       },
     ];

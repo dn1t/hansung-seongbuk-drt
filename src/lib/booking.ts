@@ -7,12 +7,14 @@ import { serviceNow, slotCutoff, tonight } from "../server/clock";
 import { searchKakaoAddress } from "../server/kakao";
 import { bookingBlock } from "../server/no-show";
 import { refreshPreviews, routeCounts } from "../server/plans";
+import { advanceForBooking } from "../server/presentation";
 import { serviceSlots } from "../server/service";
 import { ADDRESS_DETAIL_MAX_LENGTH } from "./address";
 import { bookings, operatingNights } from "./app-schema";
 import { db } from "./db";
 import { getBookingRoute, getNightRoutes } from "./night-routes";
 import { requireUserId } from "./profile";
+import { getTonight } from "./ride";
 import { users } from "./schema";
 
 export interface Booking {
@@ -137,7 +139,7 @@ export async function createBookings(input: {
   "use server";
   const done = (result: BookingResult) =>
     respond(result, {
-      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key],
+      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key, getTonight.key],
     });
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });
@@ -182,6 +184,7 @@ export async function createBookings(input: {
         .onConflictDoUpdate({ target: [bookings.userId, bookings.night], set: values });
     }
     refreshPreviews(nights);
+    await advanceForBooking(userId, nights, input.slot);
     return done({ ok: true, count: nights.length });
   } catch (err) {
     console.error("createBookings:", err);
@@ -197,7 +200,7 @@ export async function updateBooking(input: {
   "use server";
   const done = (result: BookingResult) =>
     respond(result, {
-      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key],
+      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key, getTonight.key],
     });
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });
@@ -237,6 +240,7 @@ export async function updateBooking(input: {
       })
       .where(and(eq(bookings.id, input.id), eq(bookings.userId, userId)));
     refreshPreviews([booking.night]);
+    await advanceForBooking(userId, [booking.night], input.slot);
     return done({ ok: true, count: 1 });
   } catch (err) {
     console.error("updateBooking:", err);
@@ -248,7 +252,7 @@ export async function cancelBooking(id: string): Promise<BookingResult> {
   "use server";
   const done = (result: BookingResult) =>
     respond(result, {
-      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key],
+      revalidate: [getBookingOverview.key, getSlotRoutes.key, getBookingRoute.key, getNightRoutes.key, getTonight.key],
     });
   const userId = await requireUserId().catch(() => undefined);
   if (!userId) return done({ ok: false, message: "로그인이 필요해요. 다시 로그인해 주세요." });

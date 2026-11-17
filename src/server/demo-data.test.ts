@@ -19,9 +19,9 @@ describe("demo data", () => {
     assert.equal(answers.length, riders.length);
     for (const answer of answers) {
       assert.ok(SURVEY_FREQUENCIES.includes(answer.frequency));
-      assert.ok(SURVEY_WAYS.includes(answer.way));
+      assert.ok(answer.ways.length > 0 && answer.ways.every((way) => SURVEY_WAYS.includes(way)));
       assert.ok(SURVEY_FARES.includes(answer.fare));
-      assert.ok(slots.includes(answer.slot));
+      assert.ok(answer.slots.length > 0 && answer.slots.every((slot) => slots.includes(slot)));
       assert.match(answer.startId, /^school-\d$/);
     }
   });
@@ -32,8 +32,16 @@ describe("demo data", () => {
     assert.ok(fromArea > 20 && fromArea < 100);
   });
 
+  it("lets some riders pick a second slot and a second way home", () => {
+    const answers = demoSurveys(demoRiders(200), { slots: DEMO_SLOTS, areaIds: [] });
+    const twoSlots = answers.filter((answer) => answer.slots.length === 2).length;
+    const twoWays = answers.filter((answer) => answer.ways.length === 2).length;
+    assert.ok(twoSlots > 20 && twoSlots < 120, `${twoSlots} riders picked two slots`);
+    assert.ok(twoWays > 20 && twoWays < 120, `${twoWays} riders picked two ways`);
+  });
+
   it("falls back to the service window when it has no usual demo slot", () => {
     const answers = demoSurveys(demoRiders(10), { slots: ["21:00", "21:30"], areaIds: [] });
-    assert.ok(answers.every((answer) => answer.slot === "21:00" || answer.slot === "21:30"));
+    assert.ok(answers.every((answer) => answer.slots.every((slot) => slot === "21:00" || slot === "21:30")));
   });
 });

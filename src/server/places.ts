@@ -2,8 +2,9 @@ import { asc } from "drizzle-orm";
 
 import { startAreas } from "../lib/app-schema";
 import { db } from "../lib/db";
+import { isOutsideSeoul } from "../lib/region";
 import { SCHOOL_START_IDS, SCHOOLS } from "../lib/schools";
-import { distance } from "./planner/geo";
+import { distance, type Point } from "./planner/geo";
 import type { Place } from "./planner/route";
 import { PLAN_SETTINGS } from "./planner/settings";
 
@@ -49,4 +50,10 @@ export function boardingPlace(start: StartPlace, candidates: Place[]): Place {
     if (!best || distance(stop, start) < distance(best, start)) best = stop;
   }
   return best ?? { id: `start:${start.id}`, name: `${start.name} 앞`, lat: start.lat, lng: start.lng };
+}
+
+export function planningHome(address: string | null | undefined, home: Point, candidates: Place[]): Point {
+  if (!isOutsideSeoul(address) || candidates.length === 0) return home;
+  const nearest = candidates.reduce((best, stop) => (distance(stop, home) < distance(best, home) ? stop : best));
+  return { lat: nearest.lat, lng: nearest.lng };
 }

@@ -27,21 +27,32 @@ export function SurveyForm(props: {
 }) {
   const saved = () => props.form.answers;
   const [frequency, setFrequency] = createSignal<SurveyFrequency | undefined>(() => saved()?.frequency);
-  const [slot, setSlot] = createSignal<string | undefined>(() => {
-    const answer = saved()?.slot;
-    return answer && props.form.slots.includes(answer) ? answer : undefined;
-  });
+  const [slots, setSlots] = createSignal<string[]>(() =>
+    (saved()?.slots ?? []).filter((slot) => props.form.slots.includes(slot)),
+  );
   const [startId, setStartId] = createSignal(() => {
     const starts = props.form.starts;
     return starts.find((start) => start.id === saved()?.startId)?.id ?? starts[0]?.id ?? "";
   });
-  const [way, setWay] = createSignal<SurveyWay | undefined>(() => saved()?.way);
+  const [ways, setWays] = createSignal<SurveyWay[]>(() => saved()?.ways ?? []);
   const [fare, setFare] = createSignal<SurveyFare | undefined>(() => saved()?.fare);
   const [comment, setComment] = createSignal(() => saved()?.comment ?? "");
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal("");
 
-  const ready = () => Boolean(frequency() && slot() && startId() && way() && fare());
+  const ready = () => Boolean(frequency() && slots().length > 0 && startId() && ways().length > 0 && fare());
+  const toggleSlot = (slot: string) =>
+    setSlots((current) =>
+      current.includes(slot)
+        ? current.filter((value) => value !== slot)
+        : props.form.slots.filter((value) => value === slot || current.includes(value)),
+    );
+  const toggleWay = (way: SurveyWay) =>
+    setWays((current) =>
+      current.includes(way)
+        ? current.filter((value) => value !== way)
+        : SURVEY_WAYS.filter((value) => value === way || current.includes(value)),
+    );
 
   return (
     <form
@@ -54,9 +65,9 @@ export function SurveyForm(props: {
         props
           .onSave({
             frequency: frequency()!,
-            slot: slot()!,
+            slots: slots(),
             startId: startId(),
-            way: way()!,
+            ways: ways(),
             fare: fare()!,
             comment: comment(),
           })
@@ -68,12 +79,12 @@ export function SurveyForm(props: {
         <Question title="시험·축제 기간에 얼마나 탈 것 같아요?">
           <Choices
             options={SURVEY_FREQUENCIES.map((key) => [key, FREQUENCY_LABELS[key]])}
-            selected={frequency()}
+            isSelected={(value) => frequency() === value}
             onSelect={setFrequency}
           />
         </Question>
-        <Question title="보통 몇 시쯤 집에 가요?" hint="학교나 번화가에서 출발하는 시간이에요.">
-          <SlotGrid slots={props.form.slots} selected={slot()} onSelect={setSlot} />
+        <Question title="보통 몇 시쯤 집에 가요?" hint="학교나 번화가에서 출발하는 시간이에요. 여러 개 골라도 돼요.">
+          <SlotGrid slots={props.form.slots} selected={slots()} onSelect={toggleSlot} />
         </Question>
         <Question title="주로 어디서 출발해요?">
           <Select
@@ -84,11 +95,19 @@ export function SurveyForm(props: {
             onChange={(e) => setStartId(e.currentTarget.value)}
           />
         </Question>
-        <Question title="지금은 막차가 끊기면 어떻게 집에 가요?">
-          <Choices options={SURVEY_WAYS.map((key) => [key, WAY_LABELS[key]])} selected={way()} onSelect={setWay} />
+        <Question title="지금은 막차가 끊기면 어떻게 집에 가요?" hint="여러 개 골라도 돼요.">
+          <Choices
+            options={SURVEY_WAYS.map((key) => [key, WAY_LABELS[key]])}
+            isSelected={(value) => ways().includes(value)}
+            onSelect={toggleWay}
+          />
         </Question>
         <Question title="한 번 탈 때 얼마까지 낼 수 있어요?">
-          <Choices options={SURVEY_FARES.map((key) => [key, FARE_LABELS[key]])} selected={fare()} onSelect={setFare} />
+          <Choices
+            options={SURVEY_FARES.map((key) => [key, FARE_LABELS[key]])}
+            isSelected={(value) => fare() === value}
+            onSelect={setFare}
+          />
         </Question>
         <Question title="하고 싶은 말이 있나요?" hint="적지 않아도 돼요.">
           <textarea
@@ -131,14 +150,14 @@ function Question(props: { title: string; hint?: string; children: JSX.Element }
 
 function Choices<T extends string>(props: {
   options: [T, string][];
-  selected: T | undefined;
+  isSelected: (value: T) => boolean;
   onSelect: (value: T) => void;
 }) {
   return (
     <ul class="grid grid-cols-2 gap-1.5">
       <For each={props.options}>
         {([value, label]) => {
-          const active = () => props.selected === value;
+          const active = () => props.isSelected(value);
           return (
             <li>
               <button

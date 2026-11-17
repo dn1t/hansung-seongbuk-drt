@@ -37,9 +37,9 @@ export const SURVEY_COMMENT_MAX = 300;
 
 export interface SurveyAnswers {
   frequency: SurveyFrequency;
-  slot: string;
+  slots: string[];
   startId: string;
-  way: SurveyWay;
+  ways: SurveyWay[];
   fare: SurveyFare;
   comment: string;
 }

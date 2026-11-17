@@ -113,9 +113,9 @@ async function saveDemoRiders(riders: DemoRider[]) {
           target: surveys.userId,
           set: {
             frequency: sql`excluded.frequency`,
-            slot: sql`excluded.slot`,
+            slots: sql`excluded.slots`,
             startId: sql`excluded.start_id`,
-            way: sql`excluded.way`,
+            ways: sql`excluded.ways`,
             fare: sql`excluded.fare`,
             updatedAt: new Date(),
           },

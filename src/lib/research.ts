@@ -12,15 +12,22 @@ const filterOf = (value: string) => FILTERS.find((filter) => filter === value) ?
 
 export const DEMO_DEFAULT_COUNT = 160;
 
-export const getSurveyReport = query(async (filter: string): Promise<SurveyReport & { signupUrl: string }> => {
-  "use server";
-  await requireStaff();
-  const [{ surveyReport }, { default: env }] = await Promise.all([
-    import("../server/research"),
-    import("./server-env"),
-  ]);
-  return { ...(await surveyReport(filterOf(filter))), signupUrl: `${env.BASE_URL}/welcome` };
-}, "survey-report");
+export const getSurveyReport = query(
+  async (filter: string): Promise<SurveyReport & { signupUrl: string; surveyUrl: string }> => {
+    "use server";
+    await requireStaff();
+    const [{ surveyReport }, { default: env }] = await Promise.all([
+      import("../server/research"),
+      import("./server-env"),
+    ]);
+    return {
+      ...(await surveyReport(filterOf(filter))),
+      signupUrl: `${env.BASE_URL}/welcome`,
+      surveyUrl: `${env.BASE_URL}/survey`,
+    };
+  },
+  "survey-report",
+);
 
 export async function getSurveyRows(filter: string): Promise<SurveyRow[]> {
   "use server";

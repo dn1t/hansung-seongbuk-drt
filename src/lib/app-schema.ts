@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { users } from "./schema";
-import { SURVEY_FARES, SURVEY_FREQUENCIES, SURVEY_WAYS } from "./survey-options";
+import { SURVEY_FARES, SURVEY_FREQUENCIES, type SurveyWay } from "./survey-options";
 
 export const bookings = sqliteTable(
   "bookings",
@@ -207,14 +207,42 @@ export const emailPrefs = sqliteTable("email_prefs", {
     .notNull(),
 });
 
+export const guestSurveys = sqliteTable(
+  "guest_surveys",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    school: text("school").notNull(),
+    homeAddress: text("home_address").notNull(),
+    homeLat: real("home_lat").notNull(),
+    homeLng: real("home_lng").notNull(),
+    frequency: text("frequency", { enum: SURVEY_FREQUENCIES }).notNull(),
+    slots: text("slots", { mode: "json" }).$type<string[]>().notNull(),
+    startId: text("start_id").notNull(),
+    ways: text("ways", { mode: "json" }).$type<SurveyWay[]>().notNull(),
+    fare: text("fare", { enum: SURVEY_FARES }).notNull(),
+    comment: text("comment"),
+    sourceKey: text("source_key").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index("guest_surveys_source_idx").on(table.sourceKey, table.createdAt)],
+);
+
 export const surveys = sqliteTable("surveys", {
   userId: text("user_id")
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   frequency: text("frequency", { enum: SURVEY_FREQUENCIES }).notNull(),
-  slot: text("slot").notNull(),
+  slots: text("slots", { mode: "json" })
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'`),
   startId: text("start_id").notNull(),
-  way: text("way", { enum: SURVEY_WAYS }).notNull(),
+  ways: text("ways", { mode: "json" })
+    .$type<SurveyWay[]>()
+    .notNull()
+    .default(sql`'[]'`),
   fare: text("fare", { enum: SURVEY_FARES }).notNull(),
   comment: text("comment"),
   createdAt: createdAt(),

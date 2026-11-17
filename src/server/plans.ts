@@ -17,7 +17,7 @@ import { users } from "../lib/schema";
 import { schoolOf } from "../lib/schools";
 import { inBackground } from "./background";
 import { ALL_SLOTS, nightClock, serviceNow, slotCutoff, slotIndex, slotsBetween, tonight } from "./clock";
-import { boardingPlace, startOfSchool } from "./places";
+import { boardingPlace, planningHome, startOfSchool } from "./places";
 import { adjustDepartures } from "./planner/dispatch";
 import { type PlannedBus, planNight, type PlanResult, type PlanRider } from "./planner/plan";
 import { buildRoute, coverageOf, type Place } from "./planner/route";
@@ -101,6 +101,7 @@ async function nightBookings(night: string) {
       slot: bookings.slot,
       lat: bookings.lat,
       lng: bookings.lng,
+      address: bookings.address,
       email: users.email,
     })
     .from(bookings)
@@ -121,12 +122,17 @@ function ridersOf(rows: BookingRow[], candidates: Place[]): PlanRider[] {
     const start = startOfSchool(schoolOf(row.email));
     if (!start) return [];
     return [
-      { id: row.id, slot: row.slot, home: { lat: row.lat, lng: row.lng }, board: boardingPlace(start, candidates) },
+      {
+        id: row.id,
+        slot: row.slot,
+        home: planningHome(row.address, { lat: row.lat, lng: row.lng }, candidates),
+        board: boardingPlace(start, candidates),
+      },
     ];
   });
 }
 
-const PREVIEW_FORMAT = 1;
+const PREVIEW_FORMAT = 2;
 const previewsInFlight = new Map<string, Promise<PlanResult>>();
 
 async function stopsStamp() {

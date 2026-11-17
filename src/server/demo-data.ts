@@ -114,11 +114,14 @@ export interface DemoRider {
 export interface DemoSurvey {
   userId: string;
   frequency: SurveyFrequency;
-  slot: string;
+  slots: string[];
   startId: string;
-  way: SurveyWay;
+  ways: SurveyWay[];
   fare: SurveyFare;
 }
+
+const SECOND_SLOT_SHARE = 0.35;
+const SECOND_WAY_SHARE = 0.3;
 
 export function random(seed: number) {
   return () => {
@@ -165,6 +168,7 @@ function schoolStartId(email: string) {
 
 export function demoSurveys(riders: DemoRider[], options: { slots: string[]; areaIds: string[] }): DemoSurvey[] {
   const next = random(1111);
+  const extra = random(2222);
   const slots = DEMO_SLOTS.filter((slot) => options.slots.includes(slot));
   const slotWeights = slots.map((slot) => DEMO_SLOT_WEIGHTS[DEMO_SLOTS.indexOf(slot)]);
   const fallbackSlots = slots.length > 0 ? slots : options.slots;
@@ -190,6 +194,20 @@ export function demoSurveys(riders: DemoRider[], options: { slots: string[]; are
       SURVEY_FARES.map((key) => FARE_WEIGHTS[key]),
       next,
     );
-    return { userId: rider.id, frequency, slot, startId, way, fare };
+    const pool = slots.length > 0 ? slots : fallbackSlots;
+    const later = pool[pool.indexOf(slot) + 1];
+    const otherWay = weighted(
+      SURVEY_WAYS,
+      SURVEY_WAYS.map((key) => (key === way ? 0 : WAY_WEIGHTS[key])),
+      extra,
+    );
+    return {
+      userId: rider.id,
+      frequency,
+      slots: later && extra() < SECOND_SLOT_SHARE ? [slot, later] : [slot],
+      startId,
+      ways: extra() < SECOND_WAY_SHARE ? SURVEY_WAYS.filter((key) => key === way || key === otherWay) : [way],
+      fare,
+    };
   });
 }

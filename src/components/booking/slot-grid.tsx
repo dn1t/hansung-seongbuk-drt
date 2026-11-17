@@ -4,7 +4,7 @@ import { slotRange } from "../../lib/time";
 
 export function SlotGrid(props: {
   slots: string[];
-  selected: string | undefined;
+  selected: string | string[] | undefined;
   onSelect: (slot: string) => void;
   closed?: string[];
   routes?: Record<string, number>;
@@ -13,7 +13,8 @@ export function SlotGrid(props: {
     <ul class={["grid gap-1.5", props.slots.length > 10 ? "grid-cols-4" : "grid-cols-5"]}>
       <For each={props.slots}>
         {(slot) => {
-          const active = () => props.selected === slot;
+          const active = () =>
+            Array.isArray(props.selected) ? props.selected.includes(slot) : props.selected === slot;
           const closed = () => props.closed?.includes(slot) ?? false;
           const routes = () => props.routes?.[slot] ?? 0;
           const note = () =>

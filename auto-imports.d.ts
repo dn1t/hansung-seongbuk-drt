@@ -36,6 +36,7 @@ declare global {
   const PhHourglassMediumBold: typeof import('~icons/ph/hourglass-medium-bold').default
   const PhHouseBold: typeof import('~icons/ph/house-bold').default
   const PhHouseFill: typeof import('~icons/ph/house-fill').default
+  const PhInfo: typeof import('~icons/ph/info').default
   const PhLockSimple: typeof import('~icons/ph/lock-simple').default
   const PhLockSimpleBold: typeof import('~icons/ph/lock-simple-bold').default
   const PhMagnifyingGlass: typeof import('~icons/ph/magnifying-glass').default

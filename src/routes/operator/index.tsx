@@ -6,15 +6,20 @@ import { env } from "virtual:solid-env/client";
 import { Button } from "../../components/common/button";
 import { SectionRule } from "../../components/layout/screen";
 import { type NightCell, NightMonth } from "../../components/operator/night-month";
+import { createTickingNow } from "../../components/ride/clock";
 import {
   addDemoBookings,
+  advancePresentationClock,
+  endPresentation,
+  getPresentation,
+  setPresentation,
   announceNights,
   clearDemoBookings,
   getOperatorNights,
   type OperatorNights as NightsData,
   setOperatingNights,
 } from "../../lib/operator";
-import { formatDate, formatNight } from "../../lib/time";
+import { formatClock, formatDate, formatNight, withDirectionParticle } from "../../lib/time";
 
 const DAY = 24 * 60 * 60_000;
 const MONTHS_SHOWN = 3;
@@ -220,6 +225,7 @@ export default function OperatorNights() {
           </div>
 
           <DemoBookings data={data()} />
+          <PresentationPanel />
 
           <SectionRule title="기간으로 넣기" class="mt-10" />
           <form
@@ -537,6 +543,155 @@ function DemoBookings(props: { data: NightsData }) {
           )}
         </Show>
       </p>
+    </>
+  );
+}
+
+function PresentationPanel() {
+  const state = createMemo(() => getPresentation());
+  const [night, setNight] = createSignal<string>();
+  const [clock, setClock] = createSignal("23:50");
+  const [autoAdvance, setAutoAdvance] = createSignal<boolean>();
+  const [busy, setBusy] = createSignal<string>();
+  const [status, setStatus] = createSignal<Status>();
+  const now = createTickingNow(() => state().now, 5_000);
+
+  const target = () => {
+    const picked = night();
+    return picked && state().nights.includes(picked) ? picked : state().nights[0];
+  };
+  const auto = () => autoAdvance() ?? state().autoAdvance;
+
+  async function run(key: string, action: () => Promise<{ ok: true } | { ok: false; message: string }>, done: string) {
+    setStatus(undefined);
+    setBusy(key);
+    const result = await action();
+    setBusy(undefined);
+    setStatus(result.ok ? { kind: "saved", text: done } : { kind: "error", text: result.message });
+  }
+
+  return (
+    <>
+      <SectionRule title="발표 모드" class="mt-10" />
+      <p class="mt-4 px-1 font-medium text-balance break-keep text-sand-11">
+        발표할 때 앱 시각을 운행일 밤으로 옮겨요. 학생 화면과 운영 화면이 모두 그 시각처럼 움직이고, 끄면 실제 시각으로
+        돌아가요.
+      </p>
+      <Loading fallback={<div class="h-32" />}>
+        <Show when={state().active}>
+          <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-sand-2 px-5 py-4">
+            <p class="font-medium text-sand-11">
+              지금 앱 시각{" "}
+              <b class="font-bold text-sand-12 tabular-nums">
+                {formatNight(state().night)} {formatClock(now())}
+              </b>
+            </p>
+            <div class="flex items-center gap-x-1.5">
+              <For each={[5, 10, 30]}>
+                {(minutes) => (
+                  <button
+                    type="button"
+                    disabled={busy() !== undefined}
+                    class="h-10 cursor-pointer rounded-lg bg-sand-4 px-3 text-sm font-semibold tabular-nums hover:bg-sand-5 disabled:cursor-progress"
+                    onClick={() =>
+                      void run(
+                        `+${minutes}`,
+                        () => advancePresentationClock(minutes),
+                        `앱 시각을 ${minutes}분 앞으로 옮겼어요.`,
+                      )
+                    }
+                  >
+                    +{minutes}분
+                  </button>
+                )}
+              </For>
+            </div>
+            <button
+              type="button"
+              disabled={busy() !== undefined}
+              class="ml-auto cursor-pointer text-sm font-semibold text-sand-11 hover:text-sand-12"
+              onClick={() => void run("end", () => endPresentation(), "실제 시각으로 돌아왔어요.")}
+            >
+              실제 시각으로 돌아가기
+            </button>
+          </div>
+        </Show>
+        <Show
+          when={state().nights.length > 0}
+          fallback={
+            <p class="mt-3 px-1 font-medium break-keep text-sand-11">
+              발표에 쓸 운행일이 없어요. 운행일을 먼저 넣어 주세요.
+            </p>
+          }
+        >
+          <form
+            class="mt-4 flex flex-col gap-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const chosen = target();
+              if (!chosen) return;
+              void run(
+                "set",
+                () => setPresentation({ night: chosen, clock: clock(), autoAdvance: auto() }),
+                `앱 시각을 ${formatNight(chosen)} 밤 ${withDirectionParticle(clock())} 맞췄어요.`,
+              );
+            }}
+          >
+            <div class="flex flex-wrap items-end gap-3">
+              <label class="flex flex-col gap-y-1.5">
+                <span class="ml-1 text-sm font-semibold text-sand-11">운행일</span>
+                <select
+                  class="h-13 cursor-pointer rounded-xl border border-sand-5 bg-sand-2 px-4 text-lg tabular-nums focus:border-amber-8 focus:ring-2 focus:ring-amber-5 focus:outline-none"
+                  onChange={(e) => setNight(e.currentTarget.value)}
+                >
+                  <For each={state().nights}>
+                    {(item) => (
+                      <option value={item} selected={item === target()}>
+                        {formatNight(item)} 밤
+                      </option>
+                    )}
+                  </For>
+                </select>
+              </label>
+              <label class="flex flex-col gap-y-1.5">
+                <span class="ml-1 text-sm font-semibold text-sand-11">시각</span>
+                <input
+                  type="time"
+                  required
+                  value={clock()}
+                  class="h-13 rounded-xl border border-sand-5 bg-sand-2 px-4 text-lg tabular-nums caret-amber-9 focus:border-amber-8 focus:ring-2 focus:ring-amber-5 focus:outline-none"
+                  onInput={(e) => setClock(e.currentTarget.value)}
+                />
+              </label>
+              <Button type="submit" class="w-44" variant={busy() === "set" ? "loading" : "secondary"}>
+                {state().active ? "시각 바꾸기" : "발표 모드 켜기"}
+              </Button>
+            </div>
+            <label class="flex w-max cursor-pointer items-start gap-x-2.5 px-1">
+              <input
+                type="checkbox"
+                checked={auto()}
+                class="mt-1 size-4.5 shrink-0 cursor-pointer accent-amber-9"
+                onChange={(e) => setAutoAdvance(e.currentTarget.checked)}
+              />
+              <span class="flex flex-col">
+                <span class="font-semibold">신청하면 그 시간대 노선이 정해진 직후로 넘어가기</span>
+                <span class="text-sm font-medium break-keep text-sand-11">
+                  그 밤에 사전 신청을 하면 앱 시각이 탑승 29분 전으로 넘어가서, 오늘 귀가에서 바로 노선을 고를 수
+                  있어요.
+                </span>
+              </span>
+            </label>
+          </form>
+        </Show>
+        <p role="status" class="mt-2 min-h-6 px-1 font-semibold break-keep">
+          <Show when={status()}>
+            {(current) => (
+              <span class={current().kind === "saved" ? "text-green-11" : "text-red-11"}>{current().text}</span>
+            )}
+          </Show>
+        </p>
+      </Loading>
     </>
   );
 }

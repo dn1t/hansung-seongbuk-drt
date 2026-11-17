@@ -114,7 +114,9 @@ export default function OperatorSurvey() {
                 <p class="text-sm font-medium text-sand-11 tabular-nums">
                   보이는 답변 <b class="font-bold text-sand-12">{report().totals.shown.toLocaleString()}명</b>
                   <span class="px-1.5 text-sand-10">·</span>
-                  실제 {report().totals.real.toLocaleString()}명<span class="px-1.5 text-sand-10">·</span>
+                  실제 {report().totals.real.toLocaleString()}명
+                  <Show when={report().totals.guest > 0}> (가입 없이 {report().totals.guest.toLocaleString()}명)</Show>
+                  <span class="px-1.5 text-sand-10">·</span>
                   데모 {report().totals.demo.toLocaleString()}명
                   <Show when={report().totals.unanswered > 0}>
                     <span class="px-1.5 text-sand-10">·</span>
@@ -196,7 +198,19 @@ export default function OperatorSurvey() {
             </div>
 
             <aside class="flex w-full shrink-0 flex-col gap-y-10 lg:sticky lg:top-8 lg:w-88">
-              <SignupLink url={report().signupUrl} />
+              <SignupLink
+                title="가입 링크"
+                description="구글 폼 대신 이 링크를 나눠 주세요. 학교 이메일로 가입하면서 이용 계획에 답해요."
+                url={report().signupUrl}
+                file="가입-QR"
+              />
+              <SignupLink
+                title="가입 없이 답하는 링크"
+                description="가입은 부담스러운 학생에게 나눠 주세요. 학교와 집 주소, 이용 계획만 받아요. 실제 응답으로 같이 세요."
+                url={report().surveyUrl}
+                file="설문-QR"
+                note={false}
+              />
               <DemoPanel demo={report().totals.demo} />
             </aside>
           </div>
@@ -238,7 +252,7 @@ function Block(props: { title: string; class?: string; children: JSX.Element }) 
   );
 }
 
-function SignupLink(props: { url: string }) {
+function SignupLink(props: { title: string; description: string; url: string; file: string; note?: boolean }) {
   const [copied, setCopied] = createSignal(false);
   let code: HTMLDivElement | undefined;
 
@@ -262,18 +276,16 @@ function SignupLink(props: { url: string }) {
       background.setAttribute(name, value);
     }
     copy.prepend(background);
-    saveFile(`${env.VITE_APP_NAME}-가입-QR.svg`, new Blob([copy.outerHTML], { type: "image/svg+xml" }));
+    saveFile(`${env.VITE_APP_NAME}-${props.file}.svg`, new Blob([copy.outerHTML], { type: "image/svg+xml" }));
   }
 
   return (
     <section>
-      <SectionRule title="가입 링크" />
-      <p class="mt-3 px-1 text-sm font-medium break-keep text-sand-11">
-        구글 폼 대신 이 링크를 나눠 주세요. 학교 이메일로 가입하면서 이용 계획에 답해요.
-      </p>
+      <SectionRule title={props.title} />
+      <p class="mt-3 px-1 text-sm font-medium break-keep text-sand-11">{props.description}</p>
       <div class="mt-4 flex items-center gap-x-4 rounded-2xl border border-sand-4 bg-sand-2 p-4">
         <div ref={(el) => (code = el)} class="shrink-0 rounded-xl bg-white p-2.5">
-          <QRCode value={props.url} label="가입 링크 QR" class="size-24" />
+          <QRCode value={props.url} label={`${props.title} QR`} class="size-24" />
         </div>
         <div class="flex min-w-0 flex-col gap-y-2">
           <a href={props.url} target="_blank" rel="noreferrer" class="font-semibold break-all">
@@ -298,9 +310,11 @@ function SignupLink(props: { url: string }) {
           </div>
         </div>
       </div>
-      <p class="mt-2 px-1 text-sm font-medium break-keep text-sand-11">
-        주소는 .env의 BASE_URL에서 와요. 배포한 주소로 바꿨는지 확인해 주세요.
-      </p>
+      <Show when={props.note !== false}>
+        <p class="mt-2 px-1 text-sm font-medium break-keep text-sand-11">
+          주소는 .env의 BASE_URL에서 와요. 배포한 주소로 바꿨는지 확인해 주세요.
+        </p>
+      </Show>
     </section>
   );
 }

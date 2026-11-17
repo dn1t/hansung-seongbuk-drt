@@ -3,7 +3,7 @@ import { respond } from "@solidjs/web";
 import { GET } from "@solidjs/web/server-functions";
 import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 
-import { ALL_SLOTS, kstToday, nightClock, slotsBetween, tonight } from "../server/clock";
+import { ALL_SLOTS, kstToday, nightClock, nightOf, serviceNow, slotsBetween, tonight } from "../server/clock";
 import { searchKakaoKeyword } from "../server/kakao";
 import { expectedRiders } from "../server/no-show";
 import { SCHOOL_PLACES } from "../server/places";
@@ -126,6 +126,84 @@ export async function clearDemoBookings(night: string): Promise<OperatorResult &
     console.error("clearDemoBookings:", err);
     return done({ ok: false, message: "데모 신청을 지우지 못했어요. 다시 시도해 주세요." });
   }
+}
+
+export interface PresentationState {
+  active: boolean;
+  now: number;
+  night: string;
+  autoAdvance: boolean;
+  nights: string[];
+}
+
+const CLOCK_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const PRESENTATION_STEPS = [5, 10, 30];
+
+export const getPresentation = query(async (): Promise<PresentationState> => {
+  "use server";
+  await requireStaff();
+  const { syncPresentation } = await import("../server/presentation");
+  const active = await syncPresentation();
+  const realNight = nightOf(Date.now());
+  const rows = await db
+    .select({ night: operatingNights.night })
+    .from(operatingNights)
+    .where(gte(operatingNights.night, realNight))
+    .orderBy(asc(operatingNights.night));
+  return {
+    active: active !== null,
+    now: serviceNow(),
+    night: tonight(),
+    autoAdvance: active?.autoAdvance ?? true,
+    nights: rows.map((row) => row.night),
+  };
+}, "presentation");
+
+export async function setPresentation(input: {
+  night: string;
+  clock: string;
+  autoAdvance: boolean;
+}): Promise<OperatorResult> {
+  "use server";
+  const done = (result: OperatorResult) => respond(result, { revalidate: "*" });
+  try {
+    await requireStaff();
+  } catch {
+    return done({ ok: false, message: "운영자 코드를 다시 입력해 주세요." });
+  }
+  if (!NIGHT_PATTERN.test(input.night) || !(await isOperatingNight(input.night))) {
+    return done({ ok: false, message: "운행일을 골라 주세요." });
+  }
+  if (!CLOCK_PATTERN.test(input.clock)) return done({ ok: false, message: "시각을 다시 넣어 주세요." });
+  const { startPresentation } = await import("../server/presentation");
+  await startPresentation(nightClock(input.night, input.clock), input.autoAdvance === true);
+  return done({ ok: true });
+}
+
+export async function advancePresentationClock(minutes: number): Promise<OperatorResult> {
+  "use server";
+  const done = (result: OperatorResult) => respond(result, { revalidate: "*" });
+  try {
+    await requireStaff();
+  } catch {
+    return done({ ok: false, message: "운영자 코드를 다시 입력해 주세요." });
+  }
+  if (!PRESENTATION_STEPS.includes(minutes)) return done({ ok: false, message: "앞당길 시간을 다시 골라 주세요." });
+  const { advancePresentation } = await import("../server/presentation");
+  return done((await advancePresentation(minutes)) ? { ok: true } : { ok: false, message: "발표 모드가 꺼져 있어요." });
+}
+
+export async function endPresentation(): Promise<OperatorResult> {
+  "use server";
+  const done = (result: OperatorResult) => respond(result, { revalidate: "*" });
+  try {
+    await requireStaff();
+  } catch {
+    return done({ ok: false, message: "운영자 코드를 다시 입력해 주세요." });
+  }
+  const { stopPresentation } = await import("../server/presentation");
+  await stopPresentation();
+  return done({ ok: true });
 }
 
 export interface Stop {

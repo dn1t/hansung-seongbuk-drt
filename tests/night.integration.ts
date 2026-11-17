@@ -480,4 +480,35 @@ describe("a night end to end", () => {
     await demo.clearDemoBookings(night);
     await demo.clearDemoBookings(next);
   });
+
+  it("drops a student who lives outside Seoul at the nearest stop", async () => {
+    const night = clock.tonight();
+    const db = createClient({ url });
+    await db.execute(
+      "insert into users (id, name, email, email_verified, home_address, home_lat, home_lng) values ('far', '경기 학생', 'far@hansung.ac.kr', 1, '경기 의정부시 평화로 525', 37.7381, 127.0475)",
+    );
+    for (let i = 0; i < 4; i++) {
+      await db.execute({
+        sql: "insert into users (id, name, email, email_verified, home_address, home_lat, home_lng) values (?, ?, ?, 1, 'x', 37.6531, 127.0477)",
+        args: [`near-${i}`, `근처 학생 ${i}`, `near${i}@hansung.ac.kr`],
+      });
+      await db.execute({
+        sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values (?, ?, ?, '02:00', 'x', 37.6531, 127.0477)",
+        args: [`near-${i}`, `near-${i}`, night],
+      });
+    }
+    await db.execute({
+      sql: "insert into bookings (id, user_id, night, slot, address, lat, lng) values ('far-booking', 'far', ?, '02:00', '경기 의정부시 평화로 525', 37.7381, 127.0475)",
+      args: [night],
+    });
+    const preview = await plans.previewPlan(night);
+    const bus = preview.result.buses.find((entry) => entry.route.seats.some((seat) => seat.riderId === "far-booking"));
+    await db.execute("delete from bookings where id = 'far-booking' or id like 'near-%'");
+    await db.execute("delete from users where id = 'far' or id like 'near-%'");
+    db.close();
+    assert.ok(!preview.result.unplaced.includes("far-booking"), "the student outside Seoul still gets a seat");
+    const seat = bus!.route.seats.find((entry) => entry.riderId === "far-booking")!;
+    assert.equal(bus!.route.stops[seat.alight].place.name, "노원역");
+    assert.ok(seat.walkMeters < 1, "planned from the stop itself, not from the far home");
+  });
 });
