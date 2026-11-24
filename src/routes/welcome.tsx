@@ -5,6 +5,7 @@ import { AddressPrivacyNote, AddressSearch } from "../components/common/address-
 import { Button } from "../components/common/button";
 import { DemoNotice } from "../components/common/demo-notice";
 import { Input } from "../components/common/input";
+import { Mascot } from "../components/common/mascot";
 import { OTPInput } from "../components/common/otp-input";
 import { Select } from "../components/common/select";
 import { Sheet } from "../components/common/sheet";
@@ -195,6 +196,7 @@ export default function Welcome() {
           />
           <DemoNotice class="mt-2" />
           <div class="flex flex-1 flex-col justify-end px-1 pt-16 pb-6">
+            <Mascot pose="wave" class="mb-6 -ml-2 w-28" />
             <RouteDots current={1} total={JOIN_STEPS} spacing="wide" />
             <h1 class="mt-7 max-w-72 text-[40px] leading-12 font-bold tracking-[-0.03em] text-balance break-keep">
               막차 때문에 먼저 일어나지 않아도 돼요
@@ -517,7 +519,8 @@ export default function Welcome() {
         </Sheet>
         <Show when={page() === "complete"}>
           <Header title="" isInitialPage />
-          <div class="mt-16 px-1">
+          <div class="mt-10 px-1">
+            <Mascot pose="cheer" class="mb-6 -ml-2 w-28" />
             <RouteDots current={JOIN_STEPS} total={JOIN_STEPS} spacing="wide" />
             <h1 class="mt-7 text-3xl font-bold text-balance break-keep">
               {joinState()?.name} 님,

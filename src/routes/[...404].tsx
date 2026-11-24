@@ -3,6 +3,7 @@ import { type RouteDefinition, useNavigate } from "@solidjs/router";
 import { httpStatus } from "@solidjs/web";
 import { env } from "virtual:solid-env/client";
 
+import { Mascot } from "../components/common/mascot";
 import { Footer, Header } from "../components/layout/screen";
 
 export const route = {
@@ -20,6 +21,7 @@ export default function NotFound() {
         description="주소가 바뀌었거나 없는 페이지예요. 처음 화면에서 다시 찾아 주세요."
         isInitialPage
       />
+      <Mascot pose="curious" class="mt-12 ml-1 w-32" />
       <Footer type="button" buttonLabel="처음으로 가기" onClick={() => nav("/", { replace: true })} />
     </div>
   );

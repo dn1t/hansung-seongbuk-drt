@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 
 import { Input } from "../components/common/input";
+import { Mascot } from "../components/common/mascot";
 import { Footer, Header, PasswordRules } from "../components/layout/screen";
 import { authClient } from "../lib/auth-client";
 import { isValidPassword, PASSWORD_MAX_LENGTH } from "../lib/password";
@@ -42,6 +43,7 @@ export default function ResetPassword() {
         when={linkValid()}
         fallback={
           <div class="flex flex-1 flex-col">
+            <Mascot pose="surprised" class="mt-12 ml-1 w-28" />
             <Footer type="button" buttonLabel="다시 요청하기" onClick={() => toWelcome("reset-password")} />
           </div>
         }

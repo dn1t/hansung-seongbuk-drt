@@ -2,6 +2,7 @@ import { Title } from "@solidjs/meta";
 import { createMemo, createSignal, Errored, Loading, Match, onSettled, Switch } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
+import { Mascot } from "../../../components/common/mascot";
 import { QRCode } from "../../../components/common/qr-code";
 import { keepScreenOn } from "../../../components/common/wake-lock";
 import { RouteChip } from "../../../components/ride/badges";
@@ -49,7 +50,8 @@ export default function MyQR() {
         )}
       >
         <Loading fallback={<div class="flex-1" />}>
-          <section class="mt-5 flex flex-col items-center rounded-2xl border border-sand-4 bg-white px-6 pt-8 pb-6 text-[#21201c]">
+          <section class="relative mt-14 flex flex-col items-center rounded-2xl border border-sand-4 bg-white px-6 pt-8 pb-6 text-[#21201c]">
+            <Mascot pose="peek" class="absolute right-5 bottom-full w-24 translate-y-0.5" />
             <QRCode
               value={fresh() ?? qr().value}
               label="버스 단말기에 보여 줄 내 QR"

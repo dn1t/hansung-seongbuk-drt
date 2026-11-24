@@ -238,6 +238,7 @@ Every color is defined as a `light-dark()` pair and the page declares `color-sch
 - Tight Pretendard type, bold wherever the eye needs to land, with tabular numerals for anything that changes over time.
 - A single centered mobile column (max 576px), with one full-width primary action pinned at the bottom on a solid sand-1 backing.
 - Signage structure: an inverted wordmark plate, hairline section rules, and progress drawn as route dots ending at a house.
+- A firefly mascot, one small pose per screen, at the moments that carry a feeling (welcome, done, waiting, missed, arrived, empty, error).
 
 ## Colors
 
@@ -502,6 +503,32 @@ A 2px vertical line down the left edge connects the stops, rows 14px apart. The 
 ### QR Card (signature)
 
 The QR card is always light: a white (#fff) 16px card with a 1px sand-4 border (so it keeps an edge on the light page), #21201C modules drawn as one crisp-edged SVG path at medium error correction, even in dark mode, because scanners need dark-on-light contrast. The code is up to 240px wide and holds the student's app ID signed with a one-minute window; it quietly redraws every 30 seconds (keeping the last code if the network drops) and the line under the card says a screenshot stops working after 10 minutes. The student's name (20px bold Fixed Ink) and school (14px 500 #63635E) sit under it inside the card. Below the card: a 14px sand-11 line about showing it at the reader and raising brightness, then a bordered summary of tonight's bus in normal page colors (quiet route chip and boarding time; that the QR alone is enough; 버스에 탔어요 while riding; 오늘 귀가를 마쳤어요 after).
+
+### Mascot (반딧불이)
+
+A firefly whose belly glows: the one light after the last bus, as a character. 14 poses are cut from the user's sprite sheet into `public/mascot/{pose}.webp` (transparent, about 270px on the long side) and drawn by one component, `Mascot` (`src/components/common/mascot.tsx`). It is decorative (`alt=""`, `aria-hidden`), static, and never the only carrier of meaning: the words next to it always say the whole thing. The glow and gradients are part of the artwork and don't break the no-glow rule, which is about UI surfaces.
+
+Each pose has one job, so the same feeling always gets the same firefly:
+
+| Pose | Where |
+| --- | --- |
+| wave | Welcome, above the route mark (112px); 내 정보 next to the name (64px) |
+| cheer | Signup complete, above the all-lit route mark |
+| love | /survey 알려 줘서 고마워요 |
+| curious | 404 |
+| look | 신청을 찾지 못했어요; 노선은 N시에 정해져요 box (64px) |
+| surprised | Load failure on 오늘 귀가; expired reset-password link |
+| sleep | 오늘은 운행하지 않아요 |
+| map | 오늘 밤 사전 신청 내역이 없어요 |
+| hurry | Waiting ticket card (bus on its way) |
+| giggle | Riding ticket card |
+| shy | Arrived ticket card |
+| cry | 고른 버스가 떠났어요 |
+| peek | Sitting on the top edge of the QR card, right side, its ledge line on the card border |
+| star | 사전 신청 → 내 신청 empty |
+
+- **Size:** 64–80px inside cards (on the right of the title block, top-aligned, text keeps `flex-1`), 112–128px on full screens (left-aligned with the text, above the route mark or under the header). Never wider than the text column beside it, never centered as a hero.
+- **One per screen.** It never sits in buttons, list rows, the tab bar, sheets, or operator screens.
 
 ## Do's and Don'ts
 

@@ -5,6 +5,7 @@ import { createMemo, createSignal, Errored, For, Loading, Match, onSettled, Show
 import { env } from "virtual:solid-env/client";
 
 import { DemoNotice } from "../../components/common/demo-notice";
+import { Mascot, type MascotPose } from "../../components/common/mascot";
 import { Footer, RouteDots } from "../../components/layout/screen";
 import { RouteChip, SeatCount } from "../../components/ride/badges";
 import { createTickingNow } from "../../components/ride/clock";
@@ -59,10 +60,12 @@ export default function Home() {
       <Errored
         fallback={(_, reset) => (
           <Card>
-            <p class="font-semibold">오늘 귀가 정보를 불러오지 못했어요.</p>
-            <button type="button" class="mt-2 w-max cursor-pointer font-semibold text-amber-11" onClick={reset}>
-              다시 불러오기
-            </button>
+            <WithMascot pose="surprised">
+              <p class="font-semibold">오늘 귀가 정보를 불러오지 못했어요.</p>
+              <button type="button" class="mt-2 w-max cursor-pointer font-semibold text-amber-11" onClick={reset}>
+                다시 불러오기
+              </button>
+            </WithMascot>
           </Card>
         )}
       >
@@ -74,20 +77,22 @@ export default function Home() {
                   when={state().upcoming.length > 0}
                   fallback={
                     <Card>
-                      <p class="text-xl font-bold">오늘은 운행하지 않아요</p>
-                      <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
-                        시험기간과 축제기간에만 운행해요. 신청 기간이 열리면 학교 이메일로 알려 드려요.
-                      </p>
+                      <WithMascot pose="sleep">
+                        <p class="text-xl font-bold">오늘은 운행하지 않아요</p>
+                        <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
+                          시험기간과 축제기간에만 운행해요. 신청 기간이 열리면 학교 이메일로 알려 드려요.
+                        </p>
+                      </WithMascot>
                     </Card>
                   }
                 >
                   <Card flush>
-                    <div class="px-5 py-5">
+                    <WithMascot pose="sleep" class="px-5 py-5">
                       <p class="text-xl font-bold">오늘은 운행하지 않아요</p>
                       <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
                         다음 운행은 {formatNight(state().upcoming[0].night)} 밤이에요.
                       </p>
-                    </div>
+                    </WithMascot>
                     <ul class="border-t border-sand-4 px-5 py-2">
                       <For each={state().upcoming} keyed={(item) => item.night}>
                         {(item) => (
@@ -115,10 +120,13 @@ export default function Home() {
             </Match>
             <Match when={stateOf("not-booked")}>
               <Card>
-                <p class="text-xl font-bold text-balance break-keep">오늘 밤 사전 신청 내역이 없어요</p>
-                <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
-                  노선은 미리 신청한 학생들의 집 방향으로 만들어져요. 다음 운행일은 사전 신청에서 미리 신청할 수 있어요.
-                </p>
+                <WithMascot pose="map">
+                  <p class="text-xl font-bold text-balance break-keep">오늘 밤 사전 신청 내역이 없어요</p>
+                  <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
+                    노선은 미리 신청한 학생들의 집 방향으로 만들어져요. 다음 운행일은 사전 신청에서 미리 신청할 수
+                    있어요.
+                  </p>
+                </WithMascot>
                 <a href="/booking" class="mt-4 flex w-max items-center gap-x-0.5 font-semibold">
                   사전 신청으로 가기
                   <PhCaretRightBold aria-hidden="true" class="text-sm text-sand-11" />
@@ -154,11 +162,15 @@ export default function Home() {
                   <Show when={state().fixesAt} fallback={<NearbyRoutes state={state()} />}>
                     {(fixesAt) => (
                       <section class="mt-3 rounded-2xl border border-sand-4 px-5 py-4">
-                        <p class="font-semibold break-keep tabular-nums">노선은 {formatClock(fixesAt())}에 정해져요</p>
-                        <p class="mt-1 text-sm font-medium break-keep text-sand-11">
-                          탑승 30분 전에 그때까지의 신청으로 노선이 정해지고, 그 전까지는 사전 신청에서 시간과 가는 곳을
-                          바꿀 수 있어요.
-                        </p>
+                        <WithMascot pose="look" size="small">
+                          <p class="font-semibold break-keep tabular-nums">
+                            노선은 {formatClock(fixesAt())}에 정해져요
+                          </p>
+                          <p class="mt-1 text-sm font-medium break-keep text-sand-11">
+                            탑승 30분 전에 그때까지의 신청으로 노선이 정해지고, 그 전까지는 사전 신청에서 시간과 가는
+                            곳을 바꿀 수 있어요.
+                          </p>
+                        </WithMascot>
                         <a
                           href={`/booking/routes?slot=${encodeURIComponent(state().range.from)}`}
                           class="mt-3 flex w-max items-center gap-x-0.5 font-semibold"
@@ -177,17 +189,19 @@ export default function Home() {
               {(state) => (
                 <>
                   <Card>
-                    <div class="flex items-center gap-x-2">
-                      <RouteChip name={state().ride.routeName} quiet />
-                      <span class="text-sm font-semibold text-sand-11 tabular-nums">
-                        {formatClock(state().ride.stops[state().ride.boardIndex].at)} 승차
-                      </span>
-                    </div>
-                    <p class="mt-4 text-xl font-bold text-balance break-keep">고른 버스가 떠났어요</p>
-                    <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
-                      {state().ride.stops[state().ride.boardIndex].name}에서 타기로 했던 버스예요. 다른 버스를 고르거나,
-                      오는 버스에 내 QR을 보여 주고 타요.
-                    </p>
+                    <WithMascot pose="cry">
+                      <div class="flex items-center gap-x-2">
+                        <RouteChip name={state().ride.routeName} quiet />
+                        <span class="text-sm font-semibold text-sand-11 tabular-nums">
+                          {formatClock(state().ride.stops[state().ride.boardIndex].at)} 승차
+                        </span>
+                      </div>
+                      <p class="mt-4 text-xl font-bold text-balance break-keep">고른 버스가 떠났어요</p>
+                      <p class="mt-1.5 font-medium text-balance break-keep text-sand-11">
+                        {state().ride.stops[state().ride.boardIndex].name}에서 타기로 했던 버스예요. 다른 버스를
+                        고르거나, 오는 버스에 내 QR을 보여 주고 타요.
+                      </p>
+                    </WithMascot>
                   </Card>
                   <Footer
                     type="button"
@@ -202,13 +216,15 @@ export default function Home() {
             <Match when={stateOf("arrived")}>
               {(state) => (
                 <Card>
-                  <RouteDots current={4} total={4} spacing="wide" />
-                  <p class="mt-5 text-xl font-bold break-keep">
-                    {state().ride.stops[state().ride.alightIndex].name}에서 내렸어요
-                  </p>
-                  <p class="mt-1.5 font-medium break-keep text-sand-11">
-                    집까지 걸어서 {state().ride.walkHome}분이에요. 조심히 들어가요.
-                  </p>
+                  <WithMascot pose="shy">
+                    <RouteDots current={4} total={4} spacing="wide" />
+                    <p class="mt-5 text-xl font-bold break-keep">
+                      {state().ride.stops[state().ride.alightIndex].name}에서 내렸어요
+                    </p>
+                    <p class="mt-1.5 font-medium break-keep text-sand-11">
+                      집까지 걸어서 {state().ride.walkHome}분이에요. 조심히 들어가요.
+                    </p>
+                  </WithMascot>
                 </Card>
               )}
             </Match>
@@ -227,6 +243,15 @@ function Card(props: { flush?: boolean; children: JSX.Element }) {
   );
 }
 
+function WithMascot(props: { pose: MascotPose; size?: "small"; class?: string; children: JSX.Element }) {
+  return (
+    <div class={["flex items-start gap-x-3", props.class]}>
+      <div class="flex min-w-0 flex-1 flex-col">{props.children}</div>
+      <Mascot pose={props.pose} class={props.size === "small" ? "-mr-1 w-16" : "-my-1 -mr-1 w-20"} />
+    </div>
+  );
+}
+
 function WaitingCard(props: { state: RideState }) {
   const ride = () => props.state.ride;
   const board = () => ride().stops[ride().boardIndex];
@@ -237,7 +262,7 @@ function WaitingCard(props: { state: RideState }) {
 
   return (
     <Card flush>
-      <div class="px-5 pt-5">
+      <WithMascot pose="hurry" class="px-5 pt-5">
         <div class="flex items-center gap-x-2">
           <RouteChip name={ride().routeName} />
           <span class="text-sm font-semibold text-sand-11 tabular-nums">{formatClock(board().at)} 승차</span>
@@ -261,7 +286,7 @@ function WaitingCard(props: { state: RideState }) {
             </p>
           )}
         </Show>
-      </div>
+      </WithMascot>
       <TimeLegs
         class="mt-5 border-y border-sand-4"
         inset="pl-5"
@@ -302,7 +327,7 @@ function RidingCard(props: { state: RideState }) {
 
   return (
     <Card flush>
-      <div class="px-5 pt-5">
+      <WithMascot pose="giggle" class="px-5 pt-5">
         <div class="flex items-center gap-x-2">
           <RouteChip name={ride().routeName} />
           <span class="text-sm font-semibold text-sand-11">타고 있어요</span>
@@ -313,7 +338,7 @@ function RidingCard(props: { state: RideState }) {
         <p class="mt-1 font-medium break-keep text-sand-11 tabular-nums">
           {alight().name}에 {formatClock(alight().at)} 도착 예정
         </p>
-      </div>
+      </WithMascot>
       <RouteTimeline class="mt-5 border-t border-sand-4 px-5 py-4" onCard rows={ridingRows(ride(), now())} />
       <p class="border-t border-sand-4 px-5 py-3.5 text-sm font-medium break-keep text-sand-11">
         기사님 화면에 내릴 정류장이 표시돼 있어요.

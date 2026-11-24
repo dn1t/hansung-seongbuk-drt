@@ -5,6 +5,7 @@ import { env } from "virtual:solid-env/client";
 
 import { AddressPrivacyNote, AddressSearch } from "../components/common/address-search";
 import { Button } from "../components/common/button";
+import { Mascot } from "../components/common/mascot";
 import { OptionCard } from "../components/common/option-card";
 import { Sheet } from "../components/common/sheet";
 import { Footer, Header, RouteDots, SectionRule } from "../components/layout/screen";
@@ -211,7 +212,8 @@ export default function GuestSurvey() {
         </Match>
         <Match when={step() === "done"}>
           <Header title="" isInitialPage />
-          <div class="mt-16 px-1">
+          <div class="mt-10 px-1">
+            <Mascot pose="love" class="mb-6 -ml-2 w-28" />
             <RouteDots current={4} total={4} spacing="wide" />
             <h1 class="mt-7 text-3xl font-bold text-balance break-keep">알려 줘서 고마워요</h1>
             <p class="mt-3 text-lg leading-7 font-medium text-balance break-keep text-sand-11">

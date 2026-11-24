@@ -4,6 +4,7 @@ import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { env } from "virtual:solid-env/client";
 
 import { SavedNotice } from "../../../components/common/list-row";
+import { Mascot } from "../../../components/common/mascot";
 import { Footer, SectionRule } from "../../../components/layout/screen";
 import { getBookingOverview } from "../../../lib/booking";
 import { formatClock, formatDate, formatNight, slotRange } from "../../../lib/time";
@@ -80,7 +81,12 @@ export default function BookingTab() {
           <SectionRule title="내 신청" class="mt-8" />
           <Show
             when={overview().bookings.length > 0}
-            fallback={<p class="mt-4 px-1 font-medium text-sand-11">아직 신청한 날이 없어요.</p>}
+            fallback={
+              <div class="mt-6 flex flex-col items-center gap-y-3 pb-4">
+                <Mascot pose="star" class="w-24" />
+                <p class="font-medium text-sand-11">아직 신청한 날이 없어요.</p>
+              </div>
+            }
           >
             <ul class="mt-3 overflow-hidden rounded-2xl bg-sand-2">
               <For each={overview().bookings}>

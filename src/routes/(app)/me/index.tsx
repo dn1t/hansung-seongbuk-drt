@@ -6,6 +6,7 @@ import { env } from "virtual:solid-env/client";
 import { Button } from "../../../components/common/button";
 import { Input } from "../../../components/common/input";
 import { ActionRow, LinkRow, SavedNotice, ToggleRow } from "../../../components/common/list-row";
+import { Mascot } from "../../../components/common/mascot";
 import { Sheet } from "../../../components/common/sheet";
 import { authClient } from "../../../lib/auth-client";
 import { getProfile, setBookingMail } from "../../../lib/profile";
@@ -69,11 +70,14 @@ export default function Me() {
         )}
       >
         <Loading fallback={<div class="flex-1" />}>
-          <div class="mt-5 px-1">
-            <p class="text-xl font-bold break-keep">{profile().name}</p>
-            <p class="mt-0.5 text-sm font-medium break-all text-sand-11">
-              {profile().school} · {profile().email}
-            </p>
+          <div class="mt-5 flex items-center gap-x-3 px-1">
+            <div class="min-w-0 flex-1">
+              <p class="text-xl font-bold break-keep">{profile().name}</p>
+              <p class="mt-0.5 text-sm font-medium break-all text-sand-11">
+                {profile().school} · {profile().email}
+              </p>
+            </div>
+            <Mascot pose="wave" class="-my-3 w-16" />
           </div>
           <SavedNotice message={SAVED_NOTICES[params.saved ?? ""]} class="mt-4" />
           <ul class="mt-5 overflow-hidden rounded-2xl bg-sand-2">
